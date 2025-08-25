@@ -53,7 +53,7 @@ module.exports = {
                 { name: 'İzinler', value: rolePermissions || 'Hiçbir izin yok.', inline: false },
                 { name: 'Rol Sahipleri', value: membersWithRole, inline: false }
             )
-            .setFooter('Developed by Kazolegendd', 'https://cdn.discordapp.com/avatars/1149394269061271562/a_c1715253097d7f531489af59abb3ea05.gif?size=1024');
+            .setFooter('Developed by Kazolegendd/Nostalgically edited by hicckimse', 'https://cdn.discordapp.com/avatars/1149394269061271562/a_c1715253097d7f531489af59abb3ea05.gif?size=1024');
 
         // Yanıtı gönder
         try {
