@@ -1,14 +1,20 @@
-const { Client, Intents, MessageActionRow, MessageSelectMenu, EmbedBuilder, MessageEmbed } = require('discord.js');
+// index.js
+const { Client, GatewayIntentBits, Partials, Collection, MessageEmbed, MessageActionRow, MessageSelectMenu } = require('discord.js');
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord-api-types/v9');
 const fs = require('fs');
 const cron = require('node-cron');
-const express = require('express'); // Express.js'i ekliyoruz
+const express = require('express');
 
 global.client = new Client({
     intents: [
-        Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_MESSAGE_REACTIONS
-    ]
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+    ],
+    partials: [Partials.Channel, Partials.Message, Partials.Reaction],
 });
 
 // Ayarlar ve sabitler için merkezi bir dosya kullanmak daha iyi olabilir
@@ -56,8 +62,6 @@ const MUTE_DURATION_MS = 24 * 60 * 60 * 1000; // 1 gün (milisaniye cinsinden)
 
 const userAds = new Map(); // Kullanıcıların reklam sayısını takip etmek için
 
-// Tüm sabitleri global.client.config'e atayabiliriz veya ayrı bir constants.js dosyasında toplayabiliriz.
-// Şimdilik ana dosyada dursun, ama ileride taşımak iyi bir fikir.
 client.config = {
     ROLE_EMOJI_MAP,
     BilgiRoleMap,
@@ -71,27 +75,91 @@ client.config = {
     AD_LINKS,
     MAX_ADS,
     MUTE_DURATION_MS,
-    userAds // Map'i de config'e ekleyebiliriz
+    userAds
 };
 
+client.config.token = process.env.TOKEN;
 
-client.config.token = process.env.TOKEN; // Token'ı config'e taşıdık
+// Komut koleksiyonları oluşturuluyor
+client.commands = new Collection();
+client.slashCommands = new Collection();
+const slashCommands = [];
 
-require('./src/loader')(client, fs, cron); // client, fs ve cron modüllerini loader'a gönderiyoruz
+// Komut dosyaları yükleniyor
+const commandFiles = fs.readdirSync('./src/commands').filter(file => file.endsWith('.js'));
+for (const file of commandFiles) {
+    const command = require(`./src/commands/${file}`);
+    client.commands.set(command.name, command);
+    if (command.data) {
+        client.slashCommands.set(command.data.name, command);
+        slashCommands.push(command.data.toJSON());
+    }
+}
+
+// Komutları Discord API'sine kaydetme
+client.on('ready', async () => {
+    console.log(`${client.user.tag} olarak giriş yapıldı!`);
+    const rest = new REST({ version: '9' }).setToken(client.config.token);
+
+    try {
+        console.log('(/) Komutları yenileniyor...');
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: slashCommands },
+        );
+        console.log('(/) Komutları başarıyla yenilendi!');
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+// Prefix komutları dinleniyor
+client.on('messageCreate', async message => {
+    if (message.author.bot || !message.content.startsWith(process.env.PREFIX)) return;
+
+    const args = message.content.slice(process.env.PREFIX.length).trim().split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    const command = client.commands.get(commandName) || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+
+    if (!command) return;
+
+    try {
+        await command.execute(client, message, args);
+    } catch (error) {
+        console.error(error);
+        message.reply('Bu komutu çalıştırırken bir hata oluştu!');
+    }
+});
+
+// Slash komutları dinleniyor
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isCommand()) return;
+
+    const command = client.slashCommands.get(interaction.commandName);
+
+    if (!command) return;
+
+    try {
+        await command.interact(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: 'Bu komutu çalıştırırken bir hata oluştu!', ephemeral: true });
+    }
+});
+
+require('./src/loader')(client, fs, cron);
 
 // --- WEB SUNUCUSU KISMI BAŞLANGIÇ ---
 const app = express();
-const port = process.env.PORT || 3000; // Render, PORT ortam değişkenini otomatik olarak atar
+const port = process.env.PORT || 3000;
 
-// Basit bir kök (/) endpoint'i tanımlıyoruz.
-// Render, bu endpoint'e düzenli olarak istek göndererek uygulamanızın canlı olup olmadığını kontrol eder.
 app.get('/', (req, res) => {
-  res.send('Bot aktif ve çalışıyor!');
+    res.send('Bot aktif ve çalışıyor!');
 });
 
-// Web sunucusunu başlatıyoruz
 app.listen(port, () => {
-  console.log(`Web sunucusu ${port} portunda çalışıyor.`);
+    console.log(`Web sunucusu ${port} portunda çalışıyor.`);
 });
 // --- WEB SUNUCUSU KISMI BİTİŞ ---
 
