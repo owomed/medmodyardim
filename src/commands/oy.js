@@ -4,7 +4,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 
 // Sabit kanal ID'si ve emoji, kod tekrarını önlemek için burada tanımlanabilir.
 const TARGET_CHANNEL_ID = '1238040770888339519';
-const COWONCY_EMOJI = '<:Med_cowoncy:1235298123971170417>';
+const COWONCY_EMOJI = '<:med_cowoncy:1409892592312651867>';
 
 module.exports = {
     // Slash komutu verisi
