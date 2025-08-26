@@ -14,21 +14,15 @@ module.exports = async client => { // Buraya 'async' eklendi
     client.user.setStatus("dnd");
 
     // Bot aktivite (oynadığı oyun/yayın) ayarı
+    // Sadece istediğiniz tek durumu içeren bir dizi oluşturuldu.
     const games = [
-        'MED Mod Yardım',
-        'MED 💚 kazo',    
-        'hicckimse 💛 MED',
-        'MED ❤️ kazo',
-        'hicckimse 🤍 MED',
-        'MED 🤎 kazo',
-        'hicckimse 💜 MED',
-        'MED ❤ kazo',    
-        'hicckimse 💙 MED',
+        'OwO 🧡 MED ile ilgileniyor',
     ];
 
     let currentIndex = 0;
 
     // Twitch yayıncı olarak ayarlama (10 saniyede bir değişir)
+    // Sadece tek bir durum olduğu için her zaman aynı metin gösterilecek.
     setInterval(() => {
         client.user.setActivity(games[currentIndex], { type: 'STREAMING', url: 'https://www.twitch.tv/kazo1egendd' });
         currentIndex = (currentIndex + 1) % games.length;
@@ -49,7 +43,7 @@ module.exports = async client => { // Buraya 'async' eklendi
 
             const channel = guild.channels.cache.get(channelId);
             // v13'te VoiceChannel kontrolü doğrudur.
-            if (!channel || !(channel instanceof VoiceChannel)) { 
+            if (!channel || !(channel instanceof VoiceChannel)) {
                 console.error(chalk.redBright('HATA: Belirtilen kanal bir ses kanalı değil veya bulunamadı.'));
                 return;
             }
@@ -66,16 +60,16 @@ module.exports = async client => { // Buraya 'async' eklendi
 
     // --- BİLDİRİM ROL SİSTEMİ İÇİN ROL SENKRONİZASYONU ---
     // Bot çevrimiçi olduğunda mevcut mesaj tepkilerine göre rolleri senkronize etme.
-    const CHANNEL_ID = client.config.CHANNEL_ID; 
-    const MESSAGE_ID = client.config.MESSAGE_ID; 
-    const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP; 
+    const CHANNEL_ID = client.config.CHANNEL_ID;
+    const MESSAGE_ID = client.config.MESSAGE_ID;
+    const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
 
     try {
         const channel = client.channels.cache.get(CHANNEL_ID);
         if (!channel) {
             console.error(chalk.redBright('HATA: Bildirim Rol Sistemi için kanal bulunamadı:', CHANNEL_ID));
             // Hata olduğu için buradan çıkmak isteyebilirsiniz, veya sadece loglayıp devam edebilirsiniz.
-            // return; 
+            // return;
         } else {
             const message = await channel.messages.fetch(MESSAGE_ID); // Sabit mesaj ID'si ile mesajı getir
             if (message) {
@@ -92,7 +86,7 @@ module.exports = async client => { // Buraya 'async' eklendi
                                     // Eğer kullanıcı tepkiyi bırakmışsa rolü ekle, kaldırmışsa kaldır.
                                     // Bu mantık, `messageReactionAdd` ve `messageReactionRemove` olayları ile birlikte daha etkili çalışır.
                                     // Buradaki senkronizasyon, bot çevrimdışı iken yapılan tepkileri yakalamak içindir.
-                                    if (reaction.users.cache.has(user.id)) { 
+                                    if (reaction.users.cache.has(user.id)) {
                                         if (!member.roles.cache.has(roleId)) {
                                             member.roles.add(roleId)
                                                 .then(() => console.log(chalk.blueBright(`[SYNC] Rol eklendi: ${user.tag} -> ${roleId}`)))
@@ -120,8 +114,8 @@ module.exports = async client => { // Buraya 'async' eklendi
 
     // --- YUKARI/EMOJİ TEPKİ SİSTEMİ İÇİN MEVCUT MESAJLARA TEPKİ EKLEME ---
     // Bot çevrimiçi olduğunda belirli kanaldaki son 100 mesaja otomatik emoji ekleme.
-    const CHANNEL1_ID = client.config.CHANNEL1_ID; 
-    const EMOJI = '1235321947035013231'; 
+    const CHANNEL1_ID = client.config.CHANNEL1_ID;
+    const EMOJI = '1235321947035013231';
 
     const channel1 = client.channels.cache.get(CHANNEL1_ID);
     if (channel1) {
