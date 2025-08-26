@@ -1,5 +1,4 @@
-// index.js
-const { Client, GatewayIntentBits, Partials, Collection, MessageEmbed, MessageActionRow, MessageSelectMenu } = require('discord.js');
+const { Client, Intents, MessageActionRow, MessageSelectMenu, EmbedBuilder, MessageEmbed, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const fs = require('fs');
@@ -8,13 +7,12 @@ const express = require('express');
 
 global.client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.GUILD_MESSAGES,
+        Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+        Intents.FLAGS.GUILD_VOICE_STATES
     ],
-    partials: [Partials.Channel, Partials.Message, Partials.Reaction],
+    partials: ['MESSAGE', 'CHANNEL', 'REACTION'], // Partials'ı bu şekilde belirtin
 });
 
 // Ayarlar ve sabitler için merkezi bir dosya kullanmak daha iyi olabilir
