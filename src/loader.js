@@ -1,59 +1,53 @@
-// src/loader.js
+const fs = require('fs');
 const path = require('path');
 const { Collection } = require('discord.js');
 
-module.exports = (client, fs, cron) => {
-    // client objesine commands koleksiyonunu ekle
-    // Eğer client.commands daha önce tanımlanmadıysa, burada tanımlarız.
-    // Bu, botun tüm komutlarını tutacağı yer olacak.
-    client.commands = new Collection(); 
-
-    // Cron İşleri
-    const cronJobsPath = path.join(__dirname, 'utils', 'cronJobs.js');
-    require(cronJobsPath)(client, cron);
-
-    // Mesaj Temizleyici
-    const messageCleanerPath = path.join(__dirname, 'utils', 'messageCleaner.js');
-    require(messageCleanerPath)(client);
-
-    // Anti-Reklam Sistemi
-    const antiAdSystemPath = path.join(__dirname, 'utils', 'antiAdSystem.js');
-    require(antiAdSystemPath)(client);
-
-    // Mesaj Sabitleme ve Emoji Oyunu (Varsa)
-    // Eğer 'messagePinAndEmojiGame.js' dosyanız 'emojiGame.js' ise,
-    // yolunu ona göre güncelleyin. Örneğin: path.join(__dirname, 'events', 'emojiGame.js')
-    const messagePinAndEmojiGamePath = path.join(__dirname, 'utils', 'messagePinAndEmojiGame.js'); // Veya src/events/emojiGame.js
-    require(messagePinAndEmojiGamePath)(client, fs);
-
-    // YENİ EKLENEN: Otomatik İltifat İçin Mesaj Sayacı
-    const messageCounterPath = path.join(__dirname, 'utils', 'messageCounter.js');
-    require(messageCounterPath)(client); // client objesini messageCounter modülüne geçir
-
+module.exports = (client) => {
+    // Komutları saklamak için bir Collection oluştur
+    client.commands = new Collection();
+    
     // Olay Dinleyicilerini Yükle
     const eventsPath = path.join(__dirname, 'events');
-    fs.readdirSync(eventsPath).forEach(file => {
-        if (file.endsWith('.js')) {
-            const event = require(path.join(eventsPath, file));
-            const eventName = file.replace('.js', ''); // Dosya adından olayın adını al
+    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+    for (const file of eventFiles) {
+        const filePath = path.join(eventsPath, file);
+        const event = require(filePath);
+        const eventName = file.replace('.js', '');
+
+        // `once` olayı için özel işlem (örn. `ready` olayı)
+        if (event.once) {
+            client.once(eventName, (...args) => event(client, ...args));
+        } else {
             client.on(eventName, (...args) => event(client, ...args));
-            console.log(`Olay yüklendi: ${eventName}`);
         }
-    });
+        console.log(`Olay yüklendi: ${eventName}`);
+    }
 
     // Komutları Yükle
-    const commandsPath = path.join(__dirname, 'commands'); // 'src/commands' klasörünü işaret eder
+    const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         const command = require(filePath);
-        // Her komut dosyasında 'name' ve 'execute' özellikleri olmalı
-        if (command.name && typeof command.execute === 'function') {
+        if ('name' in command && 'execute' in command) {
             client.commands.set(command.name, command);
             console.log(`Komut yüklendi: ${command.name}`);
         } else {
             console.warn(`[UYARI] ${file} dosyasında 'name' veya 'execute' özelliği eksik. Bu komut yüklenmedi.`);
         }
+    }
+
+    // Ekstra Modülleri Yükle
+    const utilsPath = path.join(__dirname, 'utils');
+    const utilityFiles = fs.readdirSync(utilsPath).filter(file => file.endsWith('.js'));
+    
+    // Her bir yardımcı modülü yükle
+    for (const file of utilityFiles) {
+        const filePath = path.join(utilsPath, file);
+        const module = require(filePath);
+        module(client); // Bu modüller zaten client objesini bekliyor
+        console.log(`Yardımcı modül yüklendi: ${file}`);
     }
 };
