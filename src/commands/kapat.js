@@ -1,43 +1,83 @@
-// src/commands/kapat.js
-const { Permissions } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 
 module.exports = {
+    // Slash komutu için veri
+    data: new SlashCommandBuilder()
+        .setName('kapat')
+        .setDescription('Belirtilen ticket kanalını kapatır.')
+        .addChannelOption(option =>
+            option.setName('kanal')
+                .setDescription('Kapatmak istediğiniz kanalı belirtin.')
+                .addChannelTypes(ChannelType.GuildText) // Sadece metin kanallarını gösterir
+                .setRequired(true)),
+    
+    // Prefix komutu için ad
     name: 'kapat',
-    description: 'Belirtilen ticket kanalını kapatır.',
-    async execute(client, message, args) {
-        // Kullanıcının yönetici yetkisi olup olmadığını kontrol et
-        if (!message.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
-            return message.channel.send('Bu komutu kullanabilmek için yönetici yetkisine sahip olmalısınız.');
+    
+    async execute(interactionOrMessage, args) {
+        // Komutun türüne göre yetki kontrolü ve kanal tespiti
+        let member, channelToClose;
+
+        if (interactionOrMessage.isChatInputCommand()) {
+            member = interactionOrMessage.member;
+            channelToClose = interactionOrMessage.options.getChannel('kanal');
+        } else {
+            member = interactionOrMessage.member;
+            const channelId = args[0];
+            channelToClose = interactionOrMessage.guild.channels.cache.get(channelId) || interactionOrMessage.mentions.channels.first();
         }
 
-        // Komuttan sonra bir kanal ID'si veya etiketlemesi olup olmadığını kontrol et
-        const channelId = args[0]; // Komuttan sonraki ilk argüman kanal ID'si olacak
-
-        if (!channelId) {
-            return message.channel.send('Lütfen kapatmak istediğiniz ticket kanalının ID\'sini veya etiketlemesini belirtin. Örnek: `!kapat 123456789012345678` veya `!kapat #ticket-adı`');
+        // Kullanıcının yetkisi yoksa
+        if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            const replyMessage = 'Bu komutu kullanabilmek için yönetici yetkisine sahip olmalısınız.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+            }
+            return;
         }
 
-        // Kanalı ID'sine göre bul
-        const channelToClose = message.guild.channels.cache.get(channelId) || message.mentions.channels.first();
-
-        // Kanalın varlığını ve ticket kanalı olup olmadığını kontrol et
+        // Kanal bulunamadıysa
         if (!channelToClose) {
-            return message.channel.send('Belirtilen ID\'ye sahip bir kanal bulunamadı.');
+            const replyMessage = 'Belirtilen kanal bulunamadı.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+            }
+            return;
         }
 
-        // Kanalın isminin "ticket-" ile başlayıp başlamadığını kontrol edebilirsiniz
-        // Bu kontrolü yapmak istemiyorsanız aşağıdaki if bloğunu silebilirsiniz.
+        // Kanalın adını kontrol et
         if (!channelToClose.name.startsWith('ticket-')) {
-            return message.channel.send('Belirttiğiniz kanal bir ticket kanalı gibi görünmüyor. Lütfen sadece ticket kanallarını kapatın.');
+            const replyMessage = 'Belirttiğiniz kanal bir ticket kanalı gibi görünmüyor.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+            }
+            return;
         }
 
         try {
             await channelToClose.delete();
-            message.channel.send(`**${channelToClose.name}** adlı ticket kanalı başarıyla kapatıldı.`);
+            const replyMessage = `**${channelToClose.name}** adlı ticket kanalı başarıyla kapatıldı.`;
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply(replyMessage);
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+                await interactionOrMessage.delete(); // Prefix komutunda mesajı sil
+            }
             console.log(`Kanal ${channelToClose.name} başarıyla kapatıldı.`);
         } catch (error) {
             console.error(`Kanal ${channelToClose.name} kapatılırken bir hata oluştu: ${error}`);
-            message.channel.send(`**${channelToClose.name}** adlı ticket kanalı kapatılırken bir hata oluştu: \`${error.message}\``);
+            const errorMessage = `**${channelToClose.name}** adlı ticket kanalı kapatılırken bir hata oluştu: \`${error.message}\``;
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: errorMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(errorMessage);
+            }
         }
     },
 };
