@@ -1,6 +1,5 @@
-// src/commands/sesgir.js
+const { SlashCommandBuilder, ChannelType } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
-const { SlashCommandBuilder } = require('@discordjs/builders');
 
 // Sabit ses kanalı ID'si
 const TARGET_CHANNEL_ID = '1235643294973956158';
@@ -15,7 +14,7 @@ module.exports = {
     name: 'sesgir',
     description: 'Botun belirli bir ses kanalına katılmasını sağlar.',
 
-    // Komutun ana mantığını yürüten bir fonksiyon oluşturalım.
+    // Komutun ana mantığını yürüten bir fonksiyon
     async handleVoiceJoin(interactionOrMessage) {
         const client = interactionOrMessage.client;
         const guild = interactionOrMessage.guild;
@@ -24,9 +23,14 @@ module.exports = {
         const voiceChannel = guild.channels.cache.get(TARGET_CHANNEL_ID);
 
         // Kanal bulunamazsa veya ses kanalı değilse hata gönder
-        if (!voiceChannel || voiceChannel.type !== 'GUILD_VOICE') {
-            return interactionOrMessage.reply ? await interactionOrMessage.reply('Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.') :
-                interactionOrMessage.channel.send('Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.');
+        if (!voiceChannel || voiceChannel.type !== ChannelType.GuildVoice) {
+            const replyMessage = 'Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+            }
+            return;
         }
 
         try {
@@ -36,14 +40,22 @@ module.exports = {
                 guildId: guild.id,
                 adapterCreator: guild.voiceAdapterCreator,
             });
+            
             // Başarılı olduğunu belirt
-            interactionOrMessage.reply ? await interactionOrMessage.reply('`Bot ses kanalına katıldı.`') :
-                interactionOrMessage.channel.send('`Bot ses kanalına katıldı.`');
+            const successMessage = '`Bot ses kanalına katıldı.`';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: successMessage });
+            } else {
+                await interactionOrMessage.channel.send(successMessage);
+            }
         } catch (error) {
             console.error('Ses kanalına katılma hatası:', error);
-            // Hata mesajı gönder
-            interactionOrMessage.reply ? await interactionOrMessage.reply('Ses kanalına katılırken bir hata oluştu.') :
-                interactionOrMessage.channel.send('Ses kanalına katılırken bir hata oluştu.');
+            const errorMessage = 'Ses kanalına katılırken bir hata oluştu.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: errorMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(errorMessage);
+            }
         }
     },
 
