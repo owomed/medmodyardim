@@ -29,5 +29,6 @@ module.exports = {
     CHANNEL_ID: '1235112746329178165', 
     MESSAGE_ID: '1269356111308525660',
 
-    
+    // Boost tepki 
+    CHANNEL1_ID: '1238505799475794043',  
 };
