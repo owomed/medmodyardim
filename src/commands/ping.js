@@ -1,5 +1,4 @@
-// src/commands/ping.js
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
     // Slash komutu verisi
@@ -10,7 +9,7 @@ module.exports = {
     // Prefix komutu için isim ve açıklama
     name: 'ping',
     description: 'Botun pingini gösterir.',
-    aliases: ['p'], // İsteğe bağlı, ek takma ad ekleyebilirsiniz.
+    aliases: ['p'],
 
     // Prefix komutları için metot
     execute(client, message) {
