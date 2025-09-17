@@ -1,3 +1,5 @@
+const { ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
+
 // Renk rolleri komutu ve etkileşimleri
 module.exports = async (client, message) => {
     if (message.content === '.rol') {
@@ -20,14 +22,14 @@ module.exports = async (client, message) => {
             emoji: role.emoji,
         }));
 
-        const row = new client.discord.MessageActionRow().addComponents(
-            new client.discord.MessageSelectMenu()
+        const row = new ActionRowBuilder().addComponents(
+            new SelectMenuBuilder()
                 .setCustomId('colorSelect')
                 .setPlaceholder('Renkler')
                 .addOptions(roleOptions)
         );
 
-        message.channel.send({ content: 'Aşağıdaki menüden renk rolünüzü seçebilirsiniz 🌸', components: [row] });
+        await message.channel.send({ content: 'Aşağıdaki menüden renk rolünüzü seçebilirsiniz 🌸', components: [row] });
     }
 };
 
@@ -43,9 +45,20 @@ module.exports.handleInteraction = async (client, interaction) => {
         console.error('Guild bulunamadı');
         return;
     }
-
-    const allowedRoles = client.config.allowedRoles; // config'ten alıyoruz
-    const colorRoleMap = client.config.colorRoleMap; // config'ten alıyoruz
+    
+    // config dosyan yoksa veya kullanmıyorsan buradaki örnek verileri kullanabilirsin
+    const allowedRoles = ['BOOSTER_ROL_ID', 'DONOR_ROL_ID']; 
+    const colorRoleMap = {
+        '1235226278311759883': 'Kırmızı',
+        '1235226195734429887': 'Yeşil',
+        '1235226003857735701': 'Mavi',
+        '1235226369995051110': 'Sarı',
+        '1235226635960324137': 'Kahverengi',
+        '1235225883787132948': 'Siyah',
+        '1235225495663280139': 'Beyaz',
+        '1235226529286586540': 'Turuncu',
+        '1235226437552963624': 'Mor'
+    };
 
     // Kullanıcının izin verilen rollerden birine sahip olup olmadığını kontrol et
     const hasAllowedRole = allowedRoles.some(roleID => member.roles.cache.has(roleID));
@@ -55,39 +68,29 @@ module.exports.handleInteraction = async (client, interaction) => {
         return;
     }
 
+    const allColorRoles = Object.keys(colorRoleMap);
+    const rolesToRemove = member.roles.cache.filter(role => allColorRoles.includes(role.id));
+    
     if (selectedValue === 'clear') {
-        // Temizle seçeneğine tıklandığında, tüm renk rollerini kaldır
-        for (const roleID of Object.values(colorRoleMap)) {
-            if (member.roles.cache.has(roleID)) {
-                try {
-                    await member.roles.remove(roleID);
-                } catch (error) {
-                    console.error(`Rol kaldırma hatası: ${error.message}`);
-                }
-            }
+        try {
+            await member.roles.remove(rolesToRemove);
+        } catch (error) {
+            console.error(`Rol kaldırma hatası: ${error.message}`);
         }
     } else {
-        // Renk rolü seçildiyse
-        const selectedRoleID = selectedValue;
-
-        // Mevcut rolleri kaldır
-        for (const roleID of Object.values(colorRoleMap)) {
-            if (member.roles.cache.has(roleID) && roleID !== selectedRoleID) {
-                try {
-                    await member.roles.remove(roleID);
-                } catch (error) {
-                    console.error(`Rol kaldırma hatası: ${error.message}`);
-                }
-            }
-        }
-
-        // Seçilen rolü ekle
-        if (!member.roles.cache.has(selectedRoleID)) {
+        if (!member.roles.cache.has(selectedValue)) {
             try {
-                await member.roles.add(selectedRoleID);
+                await member.roles.add(selectedValue);
             } catch (error) {
                 console.error(`Rol ekleme hatası: ${error.message}`);
             }
+        }
+        
+        const otherColorRoles = rolesToRemove.filter(role => role.id !== selectedValue);
+        try {
+            await member.roles.remove(otherColorRoles);
+        } catch (error) {
+            console.error(`Rol kaldırma hatası: ${error.message}`);
         }
     }
 
