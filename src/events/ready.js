@@ -43,50 +43,54 @@ module.exports = async client => {
     }
 
     // --- BİLDİRİM ROL SİSTEMİ İÇİN ROL SENKRONİZASYONU ---
-    const { CHANNEL_ID, MESSAGE_ID, ROLE_EMOJI_MAP } = client.config;
+    // --- BİLDİRİM ROL SİSTEMİ İÇİN ROL SENKRONİZASYONU ---
+    const CHANNEL_ID = '1235112746329178165';
+    const MESSAGE_ID = '1269356111308525660';
+    // Buraya tepki ve rol eşleşmelerini ekle
+    const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
 
-    try {
-        const channel = await client.channels.fetch(CHANNEL_ID).catch(() => null);
-        if (!channel) {
-            console.error(chalk.redBright('HATA: Bildirim Rol Sistemi için kanal bulunamadı:', CHANNEL_ID));
-        } else {
-            const message = await channel.messages.fetch(MESSAGE_ID).catch(() => null);
-            if (message) {
-                // Mesaj üzerindeki tüm tepkileri zorla yüklüyoruz.
-                await message.reactions.cache.each(reaction => reaction.fetch());
+    if (CHANNEL_ID && MESSAGE_ID && Object.keys(ROLE_EMOJI_MAP).length > 0) {
+        try {
+            // Kanalı ve mesajı Discord API'den doğrudan çekiyoruz
+            const channel = await client.channels.fetch(CHANNEL_ID);
+            const message = await channel.messages.fetch(MESSAGE_ID);
+            
+            // Mesajdaki tüm tepkileri zorla yüklüyoruz ve cache'e alıyoruz
+            await message.reactions.cache.each(reaction => reaction.fetch());
+            
+            // Yüklenen tepkileri güvenli bir şekilde işliyoruz
+            for (const [emojiName, reaction] of message.reactions.cache.entries()) {
+                const roleId = ROLE_EMOJI_MAP[emojiName];
                 
-                // Artık tepkileri güvenle işleyebiliriz.
-                const fetchedReactions = message.reactions.cache;
-
-                for (const reaction of fetchedReactions.values()) {
+                if (roleId) {
                     const users = await reaction.users.fetch();
-                    for (const user of users.values()) {
-                        if (!user.bot) {
-                            const roleId = ROLE_EMOJI_MAP[reaction.emoji.name];
-                            if (roleId) {
-                                const member = await message.guild.members.fetch(user.id).catch(() => null);
+                    const role = message.guild.roles.cache.get(roleId);
+
+                    if (role) {
+                        for (const user of users.values()) {
+                            if (!user.bot) {
+                                const member = await message.guild.members.fetch(user.id);
+
                                 if (member) {
                                     if (reaction.users.cache.has(user.id) && !member.roles.cache.has(roleId)) {
-                                        member.roles.add(roleId)
-                                            .then(() => console.log(chalk.blueBright(`[SYNC] Rol eklendi: ${user.tag} -> ${roleId}`)))
-                                            .catch(error => console.error(chalk.redBright(`[SYNC] Rol eklenirken hata: ${user.tag} -> ${roleId}`), error));
-                                    } else if (!reaction.users.cache.has(user.id) && member.roles.cache.has(roleId)) {
-                                        member.roles.remove(roleId)
-                                            .then(() => console.log(chalk.yellowBright(`[SYNC] Rol kaldırıldı: ${user.tag} -> ${roleId}`)))
-                                            .catch(error => console.error(chalk.redBright(`[SYNC] Rol kaldırılırken hata: ${user.tag} -> ${roleId}`), error));
+                                        await member.roles.add(roleId);
+                                        console.log(chalk.blueBright(`[SYNC] Rol eklendi: ${user.tag} -> ${role.name}`));
                                     }
                                 }
                             }
                         }
+                    } else {
+                        console.error(chalk.redBright(`HATA: '${emojiName}' emojisi için belirtilen rol bulunamadı. Rol ID: ${roleId}`));
                     }
                 }
-                console.log(chalk.greenBright('Tepki rol mesajı başarıyla senkronize edildi.'));
-            } else {
-                console.error(chalk.redBright('HATA: Bildirim Rol Sistemi için mesaj bulunamadı:', MESSAGE_ID));
             }
+
+            console.log(chalk.greenBright('Tepki rol sistemi başarıyla senkronize edildi.'));
+        } catch (error) {
+            console.error(chalk.redBright('HATA: Tepki rol sisteminde bir hata oluştu:'), error);
         }
-    } catch (error) {
-        console.error(chalk.redBright('HATA: Bildirim Rol Sistemi mesajı fetch edilirken veya roller senkronize edilirken bir hata oluştu:'), error);
+    } else {
+        console.error(chalk.redBright('HATA: Tepki rol sistemi için gerekli ID\'ler veya harita (map) tanımlı değil.'));
     }
     
     // --- YUKARI/EMOJİ TEPKİ SİSTEMİ İÇİN MEVCUT MESAJLARA TEPKİ EKLEME ---
