@@ -1,6 +1,4 @@
-// src/commands/yetkiver.js
-const { MessageEmbed, MessageActionRow, MessageSelectMenu } = require('discord.js');
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 
 // Rol ID'leri ve isimleri tanımlandı
 const ROLES = {
@@ -66,48 +64,40 @@ module.exports = {
     name: 'yetkiver',
     description: 'Belirtilen kişiye yetki verir.',
 
-    // Komutun ana mantığını yürüten bir fonksiyon oluşturalım.
+    // Komutun ana mantığını yürüten bir fonksiyon
     async handleYetkiVerCommand(interactionOrMessage, target) {
         const author = interactionOrMessage.author || interactionOrMessage.user;
 
         if (!target) {
-            return interactionOrMessage.reply ? await interactionOrMessage.reply({ content: 'Lütfen geçerli bir kullanıcı etiketleyin veya ID girin.', ephemeral: true }) :
-                interactionOrMessage.channel.send('Lütfen geçerli bir kullanıcı etiketleyin veya ID girin.');
+            const replyMessage = 'Lütfen geçerli bir kullanıcı etiketleyin veya ID girin.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+            }
+            return;
         }
 
-        const row = new MessageActionRow().addComponents(
-            new MessageSelectMenu()
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
                 .setCustomId('roleSelect')
                 .setPlaceholder('Bir yetki seçin...')
                 .addOptions(ROLE_OPTIONS)
         );
 
-        const initialEmbed = new MessageEmbed()
+        const initialEmbed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Yetki Verme Menüsü')
             .setDescription(`${target} kişisine vermek istediğiniz yetkiyi seçin.`);
 
-        // Slash komutları için farklı bir yanıt metodu kullanıyoruz
-        const responseMethod = interactionOrMessage.reply ? interactionOrMessage.reply.bind(interactionOrMessage) : interactionOrMessage.channel.send.bind(interactionOrMessage.channel);
-        const msg = await responseMethod({
-            embeds: [initialEmbed],
-            components: [row],
-            ephemeral: interactionOrMessage.reply ? true : false, // Slash komutları için ephemeral
-        });
-
-        // Eğer slash komutu ise, yanıtı düzenlemek için fetchReply kullan
-        const collectorMessage = interactionOrMessage.isCommand ? await interactionOrMessage.fetchReply() : msg;
-
-        const filter = (interaction) => {
-            return (
-                interaction.isSelectMenu() &&
-                interaction.customId === 'roleSelect' &&
-                interaction.user.id === author.id
-            );
-        };
-
-        const collector = collectorMessage.createMessageComponentCollector({
-            filter,
+        // İlk yanıtı gönder
+        const messageToCollect = await (interactionOrMessage.isChatInputCommand() 
+            ? interactionOrMessage.reply({ embeds: [initialEmbed], components: [row], ephemeral: true, fetchReply: true })
+            : interactionOrMessage.channel.send({ embeds: [initialEmbed], components: [row] })
+        );
+        
+        const collector = messageToCollect.createMessageComponentCollector({
+            filter: (i) => i.customId === 'roleSelect' && i.user.id === author.id,
             time: 60000,
         });
 
@@ -121,12 +111,12 @@ module.exports = {
 
                     const grantedRolesList = selectedRoleInfo.ids
                         .map(id => {
-                            const role = interactionOrMessage.guild.roles.cache.get(id);
+                            const role = interaction.guild.roles.cache.get(id);
                             return role ? `${role.toString()}` : `<@&${id}> (Rol bulunamadı)`;
                         })
                         .join('\n');
 
-                    const successEmbed = new MessageEmbed()
+                    const successEmbed = new EmbedBuilder()
                         .setColor('#00ff00')
                         .setTitle('Yetki Verme Tamamlandı!')
                         .setDescription(`${target} kişisine aşağıdaki yetkiler verildi:\n${grantedRolesList}`);
@@ -135,10 +125,9 @@ module.exports = {
                         embeds: [successEmbed],
                         components: [],
                     });
-                    collector.stop('role_granted');
                 } catch (error) {
                     console.error("Rol atarken bir hata oluştu:", error);
-                    const errorEmbed = new MessageEmbed()
+                    const errorEmbed = new EmbedBuilder()
                         .setColor('#ff0000')
                         .setTitle('❌ Yetki Verme Hatası!')
                         .setDescription(`Bir hata oluştu ve ${selectedRoleInfo.name} yetkisi ${target} kişisine verilemedi. Lütfen botun izinlerini ve rol hiyerarşisini kontrol edin.`);
@@ -147,10 +136,9 @@ module.exports = {
                         embeds: [errorEmbed],
                         components: [],
                     });
-                    collector.stop('error');
                 }
             } else {
-                const invalidEmbed = new MessageEmbed()
+                const invalidEmbed = new EmbedBuilder()
                     .setColor('#ffcc00')
                     .setTitle('⚠️ Geçersiz Seçim!')
                     .setDescription('Geçersiz bir yetki seçimi yapıldı. Lütfen tekrar deneyin.');
@@ -159,20 +147,19 @@ module.exports = {
                     embeds: [invalidEmbed],
                     components: [],
                 });
-                collector.stop('invalid_selection');
             }
+            collector.stop(); // Bir seçim yapıldığında toplayıcıyı durdur
         });
 
         collector.on('end', async (collected, reason) => {
             if (reason === 'time' && collected.size === 0) {
-                const timeoutEmbed = new MessageEmbed()
+                const timeoutEmbed = new EmbedBuilder()
                     .setColor('#ffcc00')
                     .setTitle('⏱️ İşlem Zaman Aşımına Uğradı!')
                     .setDescription('Yetki seçme işlemi zaman aşımına uğradı. Lütfen tekrar deneyin.');
                 
-                // Eğer mesaj hala duruyorsa düzenle
-                if (collectorMessage.editable) {
-                    await collectorMessage.edit({ embeds: [timeoutEmbed], components: [] }).catch(console.error);
+                if (messageToCollect.editable) {
+                    await messageToCollect.edit({ embeds: [timeoutEmbed], components: [] }).catch(console.error);
                 }
             }
         });
@@ -184,7 +171,6 @@ module.exports = {
         if (!message.member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
             return message.channel.send('Bu komutu kullanma yetkiniz yok.');
         }
-
         const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
         await this.handleYetkiVerCommand(message, target);
     },
