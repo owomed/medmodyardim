@@ -47,18 +47,17 @@ module.exports = async client => {
     const { CHANNEL_ID, MESSAGE_ID, ROLE_EMOJI_MAP } = client.config;
 
     try {
-        // Kanalı ve mesajı API'den zorla çekiyoruz.
         const channel = await client.channels.fetch(CHANNEL_ID).catch(() => null);
         if (!channel) {
             console.error(chalk.redBright('HATA: Bildirim Rol Sistemi için kanal bulunamadı:', CHANNEL_ID));
         } else {
             const message = await channel.messages.fetch(MESSAGE_ID).catch(() => null);
             if (message) {
-                // Mesaj üzerindeki tüm tepkileri zorla yüklüyoruz.
-                await message.reactions.cache.each(reaction => reaction.fetch());
+                // Mesaj üzerindeki tüm tepkileri zorla yüklüyoruz ve bir koleksiyona alıyoruz.
+                const fetchedReactions = await message.reactions.fetch();
                 
                 // Artık tepkileri güvenle işleyebiliriz.
-                for (const reaction of message.reactions.cache.values()) {
+                for (const reaction of fetchedReactions.values()) {
                     const users = await reaction.users.fetch();
                     for (const user of users.values()) {
                         if (!user.bot) {
