@@ -1,51 +1,72 @@
 module.exports = (client) => {
-    const ALLOWED_ROLES = client.config.ALLOWED_ROLES_ANTI_AD; // config'ten al
-    const MUTE_ROLE_ID = client.config.MUTE_ROLE_ID; // config'ten al
-    const AD_LINKS = client.config.AD_LINKS; // config'ten al
-    const MAX_ADS = client.config.MAX_ADS; // config'ten al
-    const MUTE_DURATION_MS = client.config.MUTE_DURATION_MS; // config'ten al
-    const userAds = client.config.userAds; // config'ten al (Map olduğu için referansını alıyoruz)
+    // config'ten gerekli verileri al
+    const {
+        ALLOWED_ROLES_ANTI_AD,
+        MUTE_ROLE_ID,
+        AD_LINKS,
+        MAX_ADS,
+        MUTE_DURATION_MS,
+        userAds
+    } = client.config;
 
     client.on('messageCreate', async message => {
-        if (message.author.bot) return;
+        // Bot mesajlarını ve DM'leri göz ardı et
+        if (message.author.bot || !message.guild) return;
 
+        // İzin verilen rollere sahip kullanıcıları kontrol et
         const userRoles = message.member.roles.cache.map(role => role.id);
-        const hasAllowedRole = ALLOWED_ROLES.some(roleId => userRoles.includes(roleId));
+        const hasAllowedRole = ALLOWED_ROLES_ANTI_AD.some(roleId => userRoles.includes(roleId));
 
+        // Mesajın bir reklam bağlantısı içerip içermediğini kontrol et
         const isAd = AD_LINKS.some(link => message.content.includes(link) && !message.content.startsWith('https://discord.com/channels/'));
 
         if (isAd && !hasAllowedRole) {
             const userId = message.author.id;
             const channel = message.channel;
 
-            message.delete().catch(console.error);
+            // Mesajı sil
+            await message.delete().catch(err => console.error('Reklam mesajı silinirken hata oluştu:', err));
 
-            channel.send(`${message.author}, reklam yapmamanız gerekiyor. Aksi takdirde ceza alacaksınız.`);
+            // Uyarı mesajı gönder
+            const warnMessage = await channel.send(`${message.author}, reklam yapmamanız gerekiyor. Aksi takdirde ceza alacaksınız.`);
+            setTimeout(() => warnMessage.delete().catch(console.error), 5000);
 
-            if (!userAds.has(userId)) {
-                userAds.set(userId, 1);
-            } else {
-                let adCount = userAds.get(userId);
-                adCount += 1;
-                userAds.set(userId, adCount);
+            // Kullanıcının reklam sayacını güncelle
+            const adCount = (userAds.get(userId) || 0) + 1;
+            userAds.set(userId, adCount);
 
-                if (adCount >= MAX_ADS) {
-                    const member = message.guild.members.cache.get(userId);
-                    if (member) {
-                        const muteRole = message.guild.roles.cache.get(MUTE_ROLE_ID);
-                        if (muteRole) {
-                            member.roles.add(muteRole).catch(console.error);
-                            channel.send(`${message.author}, Reklam denemeleri yaptığınız için mute rolü verildi. Bu rol 1 gün sonra kaldırılacaktır.`);
+            if (adCount >= MAX_ADS) {
+                const member = await message.guild.members.fetch(userId).catch(console.error);
+                if (member) {
+                    const muteRole = message.guild.roles.cache.get(MUTE_ROLE_ID);
+                    if (muteRole) {
+                        try {
+                            // Mute rolü ver
+                            await member.roles.add(muteRole);
+                            await channel.send(`${message.author}, ${MAX_ADS} reklam denemesi yaptığınız için mute rolü verildi. Bu rol 1 gün sonra kaldırılacaktır.`);
 
-                            setTimeout(() => {
-                                member.roles.remove(muteRole).catch(console.error);
-                                channel.send(`${message.author}, mute rolü kaldırıldı.`);
+                            // Mute süresinin sonunda rolü kaldır
+                            setTimeout(async () => {
+                                try {
+                                    await member.roles.remove(muteRole);
+                                    await channel.send(`${message.author}, mute rolü kaldırıldı.`);
+                                    userAds.delete(userId); // Sayacı sıfırla
+                                } catch (err) {
+                                    console.error('Mute rolü kaldırılırken hata oluştu:', err);
+                                }
                             }, MUTE_DURATION_MS);
+
+                        } catch (err) {
+                            console.error('Mute rolü verilirken hata oluştu:', err);
+                            channel.send(`${message.author}, mute rolü verilemedi. Lütfen botun izinlerini kontrol edin.`);
                         }
+                    } else {
+                        console.error('Mute rolü bulunamadı. Lütfen MUTE_ROLE_ID değerini kontrol edin.');
                     }
                 }
             }
         } else if (!isAd && userAds.has(message.author.id)) {
+            // Kullanıcı reklam yapmayı bıraktıysa sayacı sıfırla
             userAds.delete(message.author.id);
         }
     });
