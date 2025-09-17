@@ -1,12 +1,11 @@
-// src/utils/messageCounter.js
 const fs = require('fs');
-const { MessageEmbed } = require('discord.js'); // Embed oluşturmak için gerekli
+const { EmbedBuilder, ChannelType } = require('discord.js');
 
 const COUNTER_SETTINGS_PATH = './messageCounterSettings.json';
 const TARGET_CHANNEL_ID = '788355813244403735'; // İltifatın gönderileceği hedef kanal ID'si
 const MESSAGE_THRESHOLD = 200; // Kaç mesajda bir iltifat atılacağı
 
-// İltifatlar listesi (ilgi.js'dekiyle aynı)
+// İltifatlar listesi
 const iltifatlar = [
     'Günün nasıl geçtiğini merak ediyorum, umarım çok iyi geçiyordur!',
     'Seninle konuşmak her zaman bir zevk!',
@@ -51,69 +50,67 @@ function loadCounterSettings() {
             return JSON.parse(data);
         } catch (e) {
             console.error('Mesaj sayacı ayarları okunurken hata oluştu:', e);
-            // Hata durumunda varsayılan ayarları döndür
             return { [TARGET_CHANNEL_ID]: { count: 0, lastComplimentRecipient: null } };
         }
     }
-    // Dosya yoksa varsayılan ayarları oluştur
     return { [TARGET_CHANNEL_ID]: { count: 0, lastComplimentRecipient: null } };
 }
 
 function saveCounterSettings(settings) {
-    fs.writeFileSync(COUNTER_SETTINGS_PATH, JSON.stringify(settings, null, 2));
+    try {
+        fs.writeFileSync(COUNTER_SETTINGS_PATH, JSON.stringify(settings, null, 2));
+    } catch (e) {
+        console.error('Mesaj sayacı ayarları kaydedilirken hata oluştu:', e);
+    }
 }
 
 let counterSettings = loadCounterSettings();
 
 module.exports = (client) => {
     client.on('messageCreate', async message => {
-        // Bot kendi mesajlarını veya özel mesajları saymasın
-        if (message.author.bot || message.channel.type === 'dm') return;
+        // Bot kendi mesajlarını veya DM'leri saymasın
+        if (message.author.bot || message.channel.type === ChannelType.DM) return;
 
         // Sadece hedef kanalda sayım yap
         if (message.channel.id === TARGET_CHANNEL_ID) {
-            // Kanal ayarları yoksa oluştur
             if (!counterSettings[TARGET_CHANNEL_ID]) {
                 counterSettings[TARGET_CHANNEL_ID] = { count: 0, lastComplimentRecipient: null };
             }
 
-            counterSettings[TARGET_CHANNEL_ID].count++; // Mesaj sayacını artır
-            saveCounterSettings(counterSettings); // Ayarları kaydet
+            counterSettings[TARGET_CHANNEL_ID].count++;
+            saveCounterSettings(counterSettings);
 
             console.log(`Kanal ${TARGET_CHANNEL_ID} mesaj sayısı: ${counterSettings[TARGET_CHANNEL_ID].count}`);
 
             // Belirlenen mesaj eşiğine ulaşıldıysa
             if (counterSettings[TARGET_CHANNEL_ID].count >= MESSAGE_THRESHOLD) {
-                const recipient = message.author; // Mesajı atan kişiye iltifat et
+                const recipient = message.author;
 
-                // Aynı kişiye arka arkaya iltifat etmemek için kontrol
                 if (recipient.id !== counterSettings[TARGET_CHANNEL_ID].lastComplimentRecipient) {
                     const iltifat = iltifatlar[Math.floor(Math.random() * iltifatlar.length)];
                     
-                    // Şekilsiz embed oluştur
-                    const embed = new MessageEmbed()
-                        .setColor('#b4e5af') // Mesaj kutusunun rengi
+                    const embed = new EmbedBuilder()
+                        .setColor('#b4e5af')
                         .setTitle('Harika Bir İş Çıkardın!')
-                        .setDescription(`${recipient.tag}, ${iltifat}`)
+                        .setDescription(`${recipient}, ${iltifat}`)
                         .setThumbnail(recipient.displayAvatarURL({ dynamic: true, size: 1024 }))
                         .setFooter({
-                            text: 'Otomatik İltifat',
+                            text: 'MED ilgimatik :D',
                             iconURL: client.user.displayAvatarURL()
                         });
 
                     try {
                         await message.channel.send({ embeds: [embed] });
-                        counterSettings[TARGET_CHANNEL_ID].count = 0; // Sayacı sıfırla
-                        counterSettings[TARGET_CHANNEL_ID].lastComplimentRecipient = recipient.id; // Son iltifat alan kişiyi kaydet
+                        counterSettings[TARGET_CHANNEL_ID].count = 0;
+                        counterSettings[TARGET_CHANNEL_ID].lastComplimentRecipient = recipient.id;
                         saveCounterSettings(counterSettings);
                         console.log(`Kanal ${TARGET_CHANNEL_ID} için otomatik iltifat gönderildi.`);
                     } catch (error) {
                         console.error('Otomatik iltifat gönderilirken hata oluştu:', error);
                     }
                 } else {
-                    // Eğer aynı kişi tekrar denk gelirse, sayacı sıfırla ancak iltifat gönderme
                     console.log(`Aynı kişiye arka arkaya iltifat edilmedi: ${recipient.tag}`);
-                    counterSettings[TARGET_CHANNEL_ID].count = 0; 
+                    counterSettings[TARGET_CHANNEL_ID].count = 0;
                     saveCounterSettings(counterSettings);
                 }
             }
