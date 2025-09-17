@@ -154,7 +154,7 @@ module.exports = (client) => {
         channelSettings.emojis = newEmojis;
         channelSettings.emojiStocks = newEmojiStocks;
         channelSettings.endTime = newEndTime;
-        channelSettings.lastUsed = Date.snoğ();
+        channelSettings.lastUsed = Date.now();
 
         saveSettings(settings);
 
