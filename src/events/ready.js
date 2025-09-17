@@ -52,9 +52,12 @@ module.exports = async client => {
         } else {
             const message = await channel.messages.fetch(MESSAGE_ID).catch(() => null);
             if (message) {
-                // Tepki koleksiyonunu çekmek için doğru metodu kullanıyoruz.
-                const fetchedReactions = await message.reactions.fetch();
+                // Mesaj üzerindeki tüm tepkileri zorla yüklüyoruz.
+                await message.reactions.cache.each(reaction => reaction.fetch());
                 
+                // Artık tepkileri güvenle işleyebiliriz.
+                const fetchedReactions = message.reactions.cache;
+
                 for (const reaction of fetchedReactions.values()) {
                     const users = await reaction.users.fetch();
                     for (const user of users.values()) {
