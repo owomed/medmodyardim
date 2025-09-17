@@ -1,8 +1,17 @@
-const { ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, SelectMenuBuilder, SlashCommandBuilder } = require('discord.js');
 
-// Renk rolleri komutu ve etkileşimleri
-module.exports = async (client, message) => {
-    if (message.content === '.rol') {
+// Prefix komutu için veri
+module.exports = {
+    // Slash komutu için veri
+    data: new SlashCommandBuilder()
+        .setName('rol')
+        .setDescription('Renk rolünüzü seçebileceğiniz menüyü gönderir.'),
+    
+    // Prefix komutu için ad
+    name: 'rol',
+    
+    // Hem prefix hem de slash için çalışacak fonksiyon
+    async execute(interactionOrMessage) {
         const roles = [
             { label: 'Kırmızı', value: '1235226278311759883', emoji: '🔴' },
             { label: 'Yeşil', value: '1235226195734429887', emoji: '🟢' },
@@ -29,8 +38,13 @@ module.exports = async (client, message) => {
                 .addOptions(roleOptions)
         );
 
-        await message.channel.send({ content: 'Aşağıdaki menüden renk rolünüzü seçebilirsiniz 🌸', components: [row] });
-    }
+        // Komutun türüne göre farklı yanıtlar veriyoruz
+        if (interactionOrMessage.isChatInputCommand) {
+            await interactionOrMessage.reply({ content: 'Aşağıdaki menüden renk rolünüzü seçebilirsiniz 🌸', components: [row] });
+        } else {
+            await interactionOrMessage.channel.send({ content: 'Aşağıdaki menüden renk rolünüzü seçebilirsiniz 🌸', components: [row] });
+        }
+    },
 };
 
 // Renk rolü etkileşimlerini burada işliyoruz.
