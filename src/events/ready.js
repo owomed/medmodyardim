@@ -14,7 +14,7 @@ module.exports = async client => {
         type: 4,
     });
 
-    // --- SES KANALINA BAĞLANMA (Discord.js v14) ---
+    // --- SES KANALINA BAĞLANMA ---
     const guildId = client.config.GUILD_ID || '788355812774903809'; 
     const voiceChannelId = client.config.VOICE_CHANNEL_ID || '1235643294973956158'; 
 
@@ -40,7 +40,6 @@ module.exports = async client => {
         }
     } catch (error) {
         console.error(chalk.redBright('SES KANALI BAĞLANTI HATASI: Ses kanalına bağlanırken bir hata oluştu:'), error);
-        console.error(chalk.redBright('Olası Nedenler: Botun kanala katılma izni olmayabilir veya ses paketleri (@discordjs/voice) doğru kurulmamış olabilir.'));
     }
 
     // --- BİLDİRİM ROL SİSTEMİ İÇİN ROL SENKRONİZASYONU ---
@@ -53,10 +52,9 @@ module.exports = async client => {
         } else {
             const message = await channel.messages.fetch(MESSAGE_ID).catch(() => null);
             if (message) {
-                // Mesaj üzerindeki tüm tepkileri zorla yüklüyoruz ve bir koleksiyona alıyoruz.
+                // Tepki koleksiyonunu çekmek için doğru metodu kullanıyoruz.
                 const fetchedReactions = await message.reactions.fetch();
                 
-                // Artık tepkileri güvenle işleyebiliriz.
                 for (const reaction of fetchedReactions.values()) {
                     const users = await reaction.users.fetch();
                     for (const user of users.values()) {
