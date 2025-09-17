@@ -1,6 +1,4 @@
-// src/commands/oy.js
-const { MessageEmbed } = require('discord.js');
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 // Sabit kanal ID'si ve emoji, kod tekrarını önlemek için burada tanımlanabilir.
 const TARGET_CHANNEL_ID = '1238040770888339519';
@@ -21,16 +19,19 @@ module.exports = {
     description: 'Belirtilen kullanıcının son etiketleme mesajını gösterir',
     aliases: ['oyk'], // İsteğe bağlı, ek takma adlar ekleyebilirsiniz.
 
-    // Komutun ana mantığını yürüten bir fonksiyon oluşturalım. 
-    // Bu fonksiyon hem prefix hem de slash komutları tarafından çağrılabilir.
+    // Komutun ana mantığını yürüten bir fonksiyon
     async handleOyCommand(interactionOrMessage, targetUser) {
         const client = interactionOrMessage.client;
         const targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
 
         // Hata kontrolü
         if (!targetChannel) {
-            return interactionOrMessage.reply ? interactionOrMessage.reply('Belirtilen kanal bulunamadı. Lütfen kanal ID\'sinin doğru olduğundan emin olun.') :
-                interactionOrMessage.channel.send('Belirtilen kanal bulunamadı. Lütfen kanal ID\'sinin doğru olduğundan emin olun.');
+            const replyMessage = 'Belirtilen kanal bulunamadı. Lütfen kanal ID\'sinin doğru olduğundan emin olun.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                return interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                return interactionOrMessage.channel.send(replyMessage);
+            }
         }
 
         let targetMessage;
@@ -39,16 +40,23 @@ module.exports = {
                 .then(messages => messages.find(msg => msg.mentions.users.has(targetUser.id)));
         } catch (error) {
             console.error('Mesajlar alınırken bir hata oluştu:', error);
-            return interactionOrMessage.reply ? interactionOrMessage.reply('Mesajlar alınırken bir hata oluştu.') :
-                interactionOrMessage.channel.send('Mesajlar alınırken bir hata oluştu.');
+            const replyMessage = 'Mesajlar alınırken bir hata oluştu.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                return interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                return interactionOrMessage.channel.send(replyMessage);
+            }
         }
 
         if (!targetMessage) {
-            return interactionOrMessage.reply ? interactionOrMessage.reply(`${targetUser.username} kullanıcısı bu kanalda etiketlenmemiş.`) :
-                interactionOrMessage.channel.send(`${targetUser.username} kullanıcısı bu kanalda etiketlenmemiş.`);
+            const replyMessage = `${targetUser.username} kullanıcısı bu kanalda etiketlenmemiş.`;
+            if (interactionOrMessage.isChatInputCommand()) {
+                return interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                return interactionOrMessage.channel.send(replyMessage);
+            }
         }
 
-        // Kalan kodunuz buraya taşınabilir
         const messageContent = targetMessage.content;
         let oyCount = null;
         let obCount = null;
@@ -84,7 +92,7 @@ module.exports = {
             monthDifference = `\n\n**UYARI**: Bu mesaj, komutun kullanıldığı aydan farklı bir ayda gönderilmiş!`;
         }
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
             .setColor('#0099ff')
             .setThumbnail('https://cdn.discordapp.com/icons/788355812774903809/aed39ddb08e850df0478a079c80d05b7.jpg')
             .setTitle('OwO MED OY SİSTEMİ')
@@ -98,11 +106,14 @@ module.exports = {
                 { name: 'Mesaj Bağlantısı', value: `[Mesaja Git](${targetMessage.url})` }
             )
             .setTimestamp(targetMessage.createdTimestamp)
-            .setFooter(`Mesaj ID: ${targetMessage.id}`);
+            .setFooter({ text: `Mesaj ID: ${targetMessage.id}` });
         
         // Komutu çalıştıran kaynağa (mesaj ya da etkileşim) yanıt gönderme
-        interactionOrMessage.reply ? await interactionOrMessage.reply({ embeds: [embed] }) :
-            interactionOrMessage.channel.send({ embeds: [embed] });
+        if (interactionOrMessage.isChatInputCommand()) {
+            await interactionOrMessage.reply({ embeds: [embed] });
+        } else {
+            await interactionOrMessage.channel.send({ embeds: [embed] });
+        }
     },
 
     // Prefix komutları için metot
