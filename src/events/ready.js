@@ -1,3 +1,4 @@
+// src/events/ready.js
 const { ChannelType } = require('discord.js');
 const chalk = require('chalk');
 const moment = require('moment');
@@ -43,22 +44,15 @@ module.exports = async client => {
     }
 
     // --- BİLDİRİM ROL SİSTEMİ İÇİN ROL SENKRONİZASYONU ---
-    // --- BİLDİRİM ROL SİSTEMİ İÇİN ROL SENKRONİZASYONU ---
-    const CHANNEL_ID = '1235112746329178165';
-    const MESSAGE_ID = '1269356111308525660';
-    // Buraya tepki ve rol eşleşmelerini ekle
-    const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
+    const { CHANNEL_ID, MESSAGE_ID, ROLE_EMOJI_MAP } = client.config;
 
     if (CHANNEL_ID && MESSAGE_ID && Object.keys(ROLE_EMOJI_MAP).length > 0) {
         try {
-            // Kanalı ve mesajı Discord API'den doğrudan çekiyoruz
             const channel = await client.channels.fetch(CHANNEL_ID);
             const message = await channel.messages.fetch(MESSAGE_ID);
             
-            // Mesajdaki tüm tepkileri zorla yüklüyoruz ve cache'e alıyoruz
             await message.reactions.cache.each(reaction => reaction.fetch());
             
-            // Yüklenen tepkileri güvenli bir şekilde işliyoruz
             for (const [emojiName, reaction] of message.reactions.cache.entries()) {
                 const roleId = ROLE_EMOJI_MAP[emojiName];
                 
@@ -69,13 +63,17 @@ module.exports = async client => {
                     if (role) {
                         for (const user of users.values()) {
                             if (!user.bot) {
-                                const member = await message.guild.members.fetch(user.id);
+                                // Hata olabilecek satır burada. Üyeyi bulamazsa hata vermemesi için catch bloğu ekliyoruz.
+                                const member = await message.guild.members.fetch(user.id).catch(() => null);
 
-                                if (member) {
+                                if (member) { // Eğer üye bulunduysa
                                     if (reaction.users.cache.has(user.id) && !member.roles.cache.has(roleId)) {
                                         await member.roles.add(roleId);
                                         console.log(chalk.blueBright(`[SYNC] Rol eklendi: ${user.tag} -> ${role.name}`));
                                     }
+                                } else {
+                                    // Üye bulunamadığında logla ve devam et
+                                    console.log(chalk.redBright(`[SYNC HATA] Rol verilecek üye sunucuda bulunamadı: ${user.id}`));
                                 }
                             }
                         }
