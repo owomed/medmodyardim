@@ -61,7 +61,7 @@ module.exports.handleInteraction = async (client, interaction) => {
     }
     
     // config dosyan yoksa veya kullanmıyorsan buradaki örnek verileri kullanabilirsin
-    const allowedRoles = ['BOOSTER_ROL_ID', 'DONOR_ROL_ID']; 
+    const allowedRoles = ['1242100437226881105', '1246385623980445756','1238494451937054761','1238464695300522117','1238464471471620136','1238463055583514654','1238462654717235272','1238462176633819158','1238461730900676709','1238461314406416424']; 
     const colorRoleMap = {
         '1235226278311759883': 'Kırmızı',
         '1235226195734429887': 'Yeşil',
