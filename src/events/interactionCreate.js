@@ -1,6 +1,5 @@
-// src/events/interactionCreate.js
-const { Permissions, MessageEmbed, MessageActionRow, MessageButton, MessageSelectMenu } = require('discord.js');
-const { createWriteStream } = require('fs'); // saveTicket için gerekli
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, StringSelectMenuBuilder } = require('discord.js');
+const { createWriteStream } = require('fs');
 
 // Rol komutlarınızı import edin
 const colorRolesCommand = require('../commands/colorRoles');
@@ -11,166 +10,192 @@ let ticketCounter = 1; // Ticket sayacı (bot her başlatıldığında 1'e sıf�
 module.exports = async (client, interaction) => {
     // Sadece Select Menu veya Button etkileşimlerini işle
     if (!interaction.isSelectMenu() && !interaction.isButton()) {
-        return; 
+        return;
     }
 
     const customId = interaction.customId;
     const req = customId.split('_')[0]; // Ticket sistemi customId'lerinin ilk kısmını alır
 
     // --- ÖNCELİK 1: SELECT MENU Etkileşimlerini İşle (Rol Alma Menüleri) ---
-    // Eğer etkileşim bir Select Menu ise, bu kısım çalışır.
     if (interaction.isSelectMenu()) {
         // Renk rolü etkileşimini işle
-        // customId'niz 'colorSelect' ile EŞLEŞMELİ
-        if (customId === 'colorSelect') { 
+        if (customId === 'colorSelect') {
             await colorRolesCommand.handleInteraction(client, interaction);
-            return; // Rol etkileşimi işlendi, buradan çık
+            return;
         }
 
         // Bilgi rolü etkileşimini işle
-        // customId'niz 'BilgiSelect' ile EŞLEŞMELİ (Büyük 'B' ile)
-        if (customId === 'BilgiSelect') { 
-             await infoRolesCommand.handleInteraction(client, interaction);
-             return; // Rol etkileşimi işlendi, buradan çık
+        if (customId === 'BilgiSelect') {
+            await infoRolesCommand.handleInteraction(client, interaction);
+            return;
         }
-        
-        // NOT: Ticket Sistemi'nin eski 'newTicket' select menüsü varsa, buraya eklenmeliydi.
-        // Ama önceki kararımızla 'createTicket' direkt butonla kanal açtığı için bu kısım sadeleşti.
-        // Eğer ticket sistemi için ileride tekrar bir select menu adımı eklerseniz, o kısmı buraya eklemeniz gerekecek.
     }
 
     // --- ÖNCELİK 2: BUTON Etkileşimlerini İşle (Ticket Sistemi Butonları) ---
-    // Eğer etkileşim bir Button ise, bu kısım çalışır.
     if (interaction.isButton()) {
         const categoryId = '1268509251911811175'; // Ticket Kategori ID'si
 
         switch (req) {
             case 'createTicket': {
-                client.emit('ticketsLogs', req, interaction.guild, interaction.member.user);
+                client.emit('ticketsLogs', req, interaction.guild, interaction.user); // interaction.member.user yerine interaction.user
 
                 const existingTicket = interaction.guild.channels.cache.find(
-                    c => c.type === 'GUILD_TEXT' && 
-                         c.topic && 
-                         c.topic.includes(`Bilet ${interaction.member.user.username}`) &&
-                         !c.name.startsWith('closed-') 
+                    c => c.type === ChannelType.GuildText &&
+                        c.topic &&
+                        c.topic.includes(`Bilet ${interaction.user.username}`) &&
+                        !c.name.startsWith('closed-')
                 );
 
                 if (existingTicket) {
                     return interaction.reply({ content: `Zaten açık bir biletiniz var: <#${existingTicket.id}>`, ephemeral: true });
                 }
 
-                const channel = await interaction.guild.channels.create(`ticket-${ticketCounter}`, {
-                    type: 'GUILD_TEXT',
-                    topic: `Bilet ${interaction.member.user.username} tarafından oluşturuldu. ${new Date(Date.now()).toLocaleString()}`,
+                const channel = await interaction.guild.channels.create({
+                    name: `ticket-${ticketCounter}`,
+                    type: ChannelType.GuildText,
+                    topic: `Bilet ${interaction.user.username} tarafından oluşturuldu. ${new Date().toLocaleString()}`,
                     permissionOverwrites: [
-                        { id: interaction.guild.id, deny: ['VIEW_CHANNEL', 'SEND_MESSAGES'] },
-                        { id: interaction.member.id, allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'] },
-                        { id: client.user.id, allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'] }
+                        {
+                            id: interaction.guild.id,
+                            deny: [PermissionsBitField.Flags.ViewChannel]
+                        },
+                        {
+                            id: interaction.user.id,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
+                        },
+                        {
+                            id: client.user.id,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
+                        }
                     ],
                     parent: categoryId
                 });
 
                 ticketCounter++;
 
-                const ticketEmbed = new MessageEmbed()
-                    .setColor('GREEN')
-                    .setAuthor(`Biletiniz başarıyla oluşturuldu ${interaction.member.user.username} ✅`)
+                const ticketEmbed = new EmbedBuilder()
+                    .setColor('Green')
+                    .setAuthor({ name: `Biletiniz başarıyla oluşturuldu ${interaction.user.username} ✅` })
                     .setDescription('*Mevcut bileti kapatmak için aşağıdaki butona tıklayın, dikkat geri dönemeyeceksiniz!*');
 
-                await channel.send(`<@${interaction.member.id}>`);
-                const closeButton = new MessageButton()
-                    .setStyle('DANGER')
+                await channel.send(`<@${interaction.user.id}>`);
+                const closeButton = new ButtonBuilder()
+                    .setStyle(ButtonStyle.Danger)
                     .setLabel('Bu bileti kapat')
-                    .setCustomId(`closeTicket_${interaction.member.id}`);
+                    .setCustomId(`closeTicket_${interaction.user.id}`);
 
-                const row = new MessageActionRow().addComponents(closeButton);
+                const row = new ActionRowBuilder().addComponents(closeButton);
 
-                await channel.send({ embeds: [ticketEmbed], components: [row] });
-                return interaction.reply({ content: `Biletiniz Açıldı <@${interaction.member.id}> <#${channel.id}> ✅`, components: [], ephemeral: true });
+                return interaction.reply({ content: `Biletiniz Açıldı <#${channel.id}> ✅`, components: [], ephemeral: true });
             }
 
             case 'closeTicket': {
-                client.emit('ticketsLogs', req, interaction.guild, interaction.member.user);
+                const userId = customId.split('_')[1];
+                client.emit('ticketsLogs', req, interaction.guild, interaction.user);
                 const channel = interaction.guild.channels.cache.get(interaction.channelId);
 
                 await channel.edit({
                     permissionOverwrites: [
-                        { id: interaction.guild.id, deny: ['VIEW_CHANNEL', 'SEND_MESSAGES'] },
-                        { id: interaction.customId.split('_')[1], deny: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'] },
-                        { id: client.user.id, allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'] }
+                        {
+                            id: interaction.guild.id,
+                            deny: [PermissionsBitField.Flags.ViewChannel]
+                        },
+                        {
+                            id: userId, // Bilet sahibine VIEW_CHANNEL iznini kapat
+                            deny: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
+                        },
+                        {
+                            id: client.user.id,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
+                        }
                     ],
-                    name: `closed-${channel.name}` 
+                    name: `closed-${channel.name}`
                 });
 
-                const ticketEmbed = new MessageEmbed()
-                    .setColor('RED')
-                    .setAuthor(`${interaction.member.user.username} bu bileti kapatmaya karar verdi ❌`)
+                const ticketEmbed = new EmbedBuilder()
+                    .setColor('Red')
+                    .setAuthor({ name: `${interaction.user.username} bu bileti kapatmaya karar verdi ❌` })
                     .setDescription('*Bileti kalıcı olarak silmek veya bileti yeniden açmak için aşağıdaki butona tıklayın.*');
 
-                const reopenButton = new MessageButton().setStyle('SUCCESS').setLabel('Bu bileti yeniden aç').setCustomId(`reopenTicket_${interaction.customId.split('_')[1]}`);
-                const saveButton = new MessageButton().setStyle('SUCCESS').setLabel('Bu bileti kaydet').setCustomId(`saveTicket_${interaction.customId.split('_')[1]}`);
-                const deleteButton = new MessageButton().setStyle('DANGER').setLabel('Bu bileti sil').setCustomId('deleteTicket');
-                const row = new MessageActionRow().addComponents(reopenButton, saveButton, deleteButton);
+                const reopenButton = new ButtonBuilder().setStyle(ButtonStyle.Success).setLabel('Bu bileti yeniden aç').setCustomId(`reopenTicket_${userId}`);
+                const saveButton = new ButtonBuilder().setStyle(ButtonStyle.Success).setLabel('Bu bileti kaydet').setCustomId(`saveTicket_${userId}`);
+                const deleteButton = new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('Bu bileti sil').setCustomId('deleteTicket');
+                const row = new ActionRowBuilder().addComponents(reopenButton, saveButton, deleteButton);
 
                 return interaction.reply({ embeds: [ticketEmbed], components: [row] });
             }
 
             case 'reopenTicket': {
-                client.emit('ticketsLogs', req, interaction.guild, interaction.member.user);
+                const userId = customId.split('_')[1];
+                client.emit('ticketsLogs', req, interaction.guild, interaction.user);
                 const channel = interaction.guild.channels.cache.get(interaction.channelId);
 
                 await channel.edit({
                     permissionOverwrites: [
-                        { id: interaction.guild.id, deny: ['VIEW_CHANNEL', 'SEND_MESSAGES'] },
-                        { id: interaction.customId.split('_')[1], allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'] },
-                        { id: client.user.id, allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'] }
+                        {
+                            id: interaction.guild.id,
+                            deny: [PermissionsBitField.Flags.ViewChannel]
+                        },
+                        {
+                            id: userId, // Bilet sahibine tekrar izin ver
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
+                        },
+                        {
+                            id: client.user.id,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
+                        }
                     ],
                     name: channel.name.replace('closed-', '')
                 });
 
-                const ticketEmbed = new MessageEmbed()
-                    .setColor('GREEN')
-                    .setAuthor(`Bilet yeniden açıldı ✅`)
+                const ticketEmbed = new EmbedBuilder()
+                    .setColor('Green')
+                    .setAuthor({ name: `Bilet yeniden açıldı ✅` })
                     .setDescription('*Mevcut bileti kapatmak için aşağıdaki butona tıklayın, dikkat geri dönemeyeceksiniz!*');
 
-                const closeButton = new MessageButton().setStyle('DANGER').setLabel('Bu bileti kapat').setCustomId(`closeTicket_${interaction.customId.split('_')[1]}`);
-                const row = new MessageActionRow().addComponents(closeButton);
+                const closeButton = new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('Bu bileti kapat').setCustomId(`closeTicket_${userId}`);
+                const row = new ActionRowBuilder().addComponents(closeButton);
 
                 return interaction.reply({ embeds: [ticketEmbed], components: [row] });
             }
 
             case 'deleteTicket': {
-                client.emit('ticketsLogs', req, interaction.guild, interaction.member.user);
+                client.emit('ticketsLogs', req, interaction.guild, interaction.user);
                 const channel = interaction.guild.channels.cache.get(interaction.channelId);
                 return channel.delete();
             }
 
             case 'saveTicket': {
-                client.emit('ticketsLogs', req, interaction.guild, interaction.member.user);
+                const userId = customId.split('_')[1];
+                client.emit('ticketsLogs', req, interaction.guild, interaction.user);
                 const channel = interaction.guild.channels.cache.get(interaction.channelId);
 
-                await channel.messages.fetch().then(async msg => {
-                    let messages = msg.filter(msg => msg.author.bot !== true).map(m => {
-                        const date = new Date(m.createdTimestamp).toLocaleString();
-                        const user = `${m.author.tag}${m.author.id === interaction.customId.split('_')[1] ? ' (ticket creator)' : ''}`;
-                        return `${date} - ${user} : ${m.attachments.size > 0 ? m.attachments.first().proxyURL : m.content}`;
-                    }).reverse().join('\n');
+                await interaction.deferReply({ ephemeral: true });
 
-                    if (messages.length < 1) messages = 'Bu bilette mesaj yok... garip';
+                const messages = await channel.messages.fetch({ limit: 100 });
+                const ticketMessages = messages.filter(msg => !msg.author.bot).map(m => {
+                    const date = new Date(m.createdTimestamp).toLocaleString();
+                    const user = `${m.author.tag}${m.author.id === userId ? ' (ticket creator)' : ''}`;
+                    return `${date} - ${user} : ${m.attachments.size > 0 ? m.attachments.first().proxyURL : m.content}`;
+                }).reverse().join('\n');
 
-                    const ticketID = Date.now();
-                    const stream = createWriteStream(`./data/${ticketID}.txt`); 
+                const fileContent = ticketMessages.length > 0 ?
+                    `Kullanıcı bileti ${userId} (channel #${channel.name})\n\n${ticketMessages}\n\nLogs ${new Date().toLocaleString()}` :
+                    `Bu bilette mesaj yok.`;
 
-                    stream.once('open', () => {
-                        stream.write(`Kullanıcı bileti ${interaction.customId.split('_')[1]} (channel #${channel.name})\n\n`);
-                        stream.write(`${messages}\n\nLogs ${new Date(ticketID).toLocaleString()}`);
-                        stream.write(`\n\nTicket kapatma işlemi: ${interaction.user.tag} (${interaction.user.id}) tarafından ${new Date().toLocaleString()}`);
-                        stream.end();
-                    });
+                const ticketID = Date.now();
+                const fileName = `./data/ticket-${ticketID}.txt`;
 
-                    stream.on('finish', () => interaction.reply({ files: [`./data/${ticketID}.txt`] }));
+                await new Promise((resolve, reject) => {
+                    const stream = createWriteStream(fileName);
+                    stream.on('finish', resolve);
+                    stream.on('error', reject);
+                    stream.write(fileContent);
+                    stream.end();
                 });
-                break; 
+
+                await interaction.followUp({ files: [fileName], ephemeral: true });
+                break;
             }
         }
     }
