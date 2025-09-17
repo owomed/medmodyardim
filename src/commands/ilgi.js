@@ -1,10 +1,19 @@
-// src/commands/ilgi.js
-const { MessageEmbed } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
+    // Slash komutu için veri
+    data: new SlashCommandBuilder()
+        .setName('ilgi')
+        .setDescription('Etiketlenen kişiye rastgele bir iltifat eder.')
+        .addUserOption(option =>
+            option.setName('kullanıcı')
+                .setDescription('İltifat edilecek kullanıcıyı etiketleyin.')
+                .setRequired(true)),
+
+    // Prefix komutu için ad
     name: 'ilgi',
-    description: 'Etiketlenen kişiye rastgele bir iltifat eder ve komutu kullanan kişinin mesajını siler.',
-    async execute(client, message, args) {
+
+    async execute(interactionOrMessage, args) {
         const iltifatlar = [
             'Günün nasıl geçtiğini merak ediyorum, umarım çok iyi geçiyordur!',
             'Seninle konuşmak her zaman bir zevk!',
@@ -41,36 +50,41 @@ module.exports = {
             'Seninle birlikteyken, her anımızın bir fotoğraf karesine dönüşmesini istiyorum. Çünkü seninle her an ölümsüzleşiyor.'
         ];
 
-        const user = message.mentions.users.first();
-        if (!user) {
-            return message.channel.send('Lütfen bir kişiyi etiketleyin.');
+        // Komutun türüne göre kullanıcıyı al
+        let user;
+        if (interactionOrMessage.isChatInputCommand) {
+            user = interactionOrMessage.options.getUser('kullanıcı');
+        } else {
+            user = interactionOrMessage.mentions.users.first();
+            if (!user) {
+                await interactionOrMessage.channel.send('Lütfen bir kişiyi etiketleyin.');
+                return;
+            }
         }
 
         const iltifat = iltifatlar[Math.floor(Math.random() * iltifatlar.length)];
 
-        // Şekilsiz embed oluştur
-        const embed = new MessageEmbed()
-            .setColor('#b4e5af') // Renk
+        const embed = new EmbedBuilder()
+            .setColor('#b4e5af')
             .setTitle('❤❤❤')
             .setDescription(`${user.tag}, ${iltifat}`)
-            .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 })) // Animasyonlu avatarlar ve daha yüksek çözünürlük desteği
+            .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
             .setFooter({
                 text: 'Developed by Kazolegendd/ Nostalgically edited by hicckimse',
                 iconURL: 'https://cdn.discordapp.com/avatars/1149394269061271562/a_c1715253097d7f531489af59abb3ea05.gif?size=1024'
             });
 
-        try {
-            await message.channel.send({ embeds: [embed] });
-        } catch (error) {
-            console.error('İltifat gönderilirken bir hata oluştu:', error);
-            return message.channel.send('İltifat gönderilirken bir hata oluştu.');
-        }
-
-        try {
-            await message.delete();
-        } catch (error) {
-            console.error('Mesaj silinirken bir hata oluştu:', error);
-            return message.channel.send('Mesaj silinirken bir hata oluştu.');
+        // Komutun türüne göre farklı yanıtlar veriyoruz
+        if (interactionOrMessage.isChatInputCommand) {
+            await interactionOrMessage.reply({ embeds: [embed] });
+        } else {
+            await interactionOrMessage.channel.send({ embeds: [embed] });
+            // Prefix komutunda mesajı silme işlevini koruyoruz
+            try {
+                await interactionOrMessage.delete();
+            } catch (error) {
+                console.error('Mesaj silinirken bir hata oluştu:', error);
+            }
         }
     },
 };
