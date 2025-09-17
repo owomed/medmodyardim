@@ -24,4 +24,10 @@ module.exports = {
 
     // Diğer Sabitler
     DM_LOG_CHANNEL_ID: '1235584702308552765', // DM loglarının gönderileceği kanal
+    
+    // Bildirim ve Rol Sistemi
+    CHANNEL_ID: '1235112746329178165', 
+    MESSAGE_ID: '1269356111308525660',
+
+    
 };
