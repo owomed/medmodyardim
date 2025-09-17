@@ -7,8 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Yapılandırma dosyasını içe aktar
-const config = require('./src/config.js');
-
+const config = require('./config.js');
 // Bot istemcisini oluştur ve ayarlarını yap
 const client = new Client({
     intents: [
