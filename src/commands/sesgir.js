@@ -10,12 +10,16 @@ module.exports = {
         .setName('sesgir')
         .setDescription('Botun belirli bir ses kanalına katılmasını sağlar.'),
     
-    // Prefix komutu için isim ve açıklama
+    // Prefix komutu için isim ve takma adlar
     name: 'sesgir',
+    aliases: ['vcgir'], // Ek takma ad eklendi
     description: 'Botun belirli bir ses kanalına katılmasını sağlar.',
 
-    // Komutun ana mantığını yürüten bir fonksiyon
-    async execute(interactionOrMessage) {
+    /**
+     * Komutun ana mantığını yürüten bir fonksiyon
+     * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
+     */
+    async handleSesGirCommand(interactionOrMessage) {
         const client = interactionOrMessage.client;
         const guild = interactionOrMessage.guild;
         
@@ -25,10 +29,11 @@ module.exports = {
         // Kanal bulunamazsa veya ses kanalı değilse hata gönder
         if (!voiceChannel || voiceChannel.type !== ChannelType.GuildVoice) {
             const replyMessage = 'Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.';
-            if (interactionOrMessage.isCommand()) {
+            if (interactionOrMessage.isChatInputCommand()) {
                 await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(replyMessage);
+                await interactionOrMessage.delete().catch(console.error);
             }
             return;
         }
@@ -43,19 +48,30 @@ module.exports = {
             
             // Başarılı olduğunu belirt
             const successMessage = '`Bot ses kanalına katıldı.`';
-            if (interactionOrMessage.isCommand()) {
+            if (interactionOrMessage.isChatInputCommand()) {
                 await interactionOrMessage.reply({ content: successMessage });
             } else {
                 await interactionOrMessage.channel.send(successMessage);
+                await interactionOrMessage.delete().catch(console.error);
             }
         } catch (error) {
             console.error('Ses kanalına katılma hatası:', error);
             const errorMessage = 'Ses kanalına katılırken bir hata oluştu.';
-            if (interactionOrMessage.isCommand()) {
+            if (interactionOrMessage.isChatInputCommand()) {
                 await interactionOrMessage.reply({ content: errorMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(errorMessage);
             }
         }
+    },
+
+    // Prefix komutları için metot
+    async execute(message) {
+        await this.handleSesGirCommand(message);
+    },
+
+    // Slash komutları için metot
+    async interact(interaction) {
+        await this.handleSesGirCommand(interaction);
     },
 };
