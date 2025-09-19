@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 const { Collection } = require('discord.js');
@@ -17,10 +16,18 @@ module.exports = (client) => {
         const event = require(filePath);
         const eventName = file.replace('.js', '');
 
+        // Olayın bir fonksiyon mu yoksa 'execute' metoduna sahip bir nesne mi olduğunu kontrol et
+        const eventHandler = event.execute || event;
+
+        if (typeof eventHandler !== 'function') {
+            console.warn(`[UYARI] ${file} dosyası geçerli bir olay işleyici değil. Yüklenmedi.`);
+            continue;
+        }
+
         if (event.once) {
-            client.once(eventName, (...args) => event(client, ...args));
+            client.once(eventName, (...args) => eventHandler(client, ...args));
         } else {
-            client.on(eventName, (...args) => event(client, ...args));
+            client.on(eventName, (...args) => eventHandler(client, ...args));
         }
         console.log(`Olay yüklendi: ${eventName}`);
     }
@@ -47,12 +54,14 @@ module.exports = (client) => {
 
     // Ekstra Modülleri Yükle
     const utilsPath = path.join(__dirname, 'utils');
-    const utilityFiles = fs.readdirSync(utilsPath).filter(file => file.endsWith('.js'));
-    
-    for (const file of utilityFiles) {
-        const filePath = path.join(utilsPath, file);
-        const module = require(filePath);
-        module(client);
-        console.log(`Yardımcı modül yüklendi: ${file}`);
+    if (fs.existsSync(utilsPath)) {
+        const utilityFiles = fs.readdirSync(utilsPath).filter(file => file.endsWith('.js'));
+        
+        for (const file of utilityFiles) {
+            const filePath = path.join(utilsPath, file);
+            const module = require(filePath);
+            module(client);
+            console.log(`Yardımcı modül yüklendi: ${file}`);
+        }
     }
 };
