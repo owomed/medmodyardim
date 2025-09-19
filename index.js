@@ -31,28 +31,34 @@ const slashCommands = []; // Slash komutlarını tutmak için bir dizi
 // Loader, komutları yükleyerek client.commands koleksiyonunu dolduracak
 require('./src/loader.js')(client);
 
-// Komutları Discord API'sine kaydetme
+// client.on('ready', ...'nin içine koyacağın yeni kod bloğu
 client.on('ready', async () => {
     console.log(`${client.user.tag} olarak giriş yapıldı!`);
-
+    
     // Slash komutlarını bir diziye topla
+    const slashCommands = [];
     for (const command of client.slashCommands.values()) {
         if (command.data) {
             slashCommands.push(command.data.toJSON());
         }
     }
 
-    const rest = new REST({ version: '9' }).setToken(client.config.token);
+    // Yeni ve doğru API versiyonunu (v10) kullanıyoruz
+    const rest = new REST({ version: '10' }).setToken(client.config.TOKEN);
 
     try {
         console.log('(/) Komutları yenileniyor...');
+        
+        // Komutları global yerine sunucuya özel yüklüyoruz.
+        // Bu çok daha hızlıdır. GUILD_ID'yi config.js'den alıyor.
         await rest.put(
-            Routes.applicationCommands(client.user.id),
+            Routes.applicationGuildCommands(client.config.CLIENT_ID, client.config.GUILD_ID),
             { body: slashCommands },
         );
-        console.log('(/) Komutları başarıyla yenilendi!');
+
+        console.log('(/) Komutları başarıyla yüklendi!');
     } catch (error) {
-        console.error(error);
+        console.error('(/) Komut yüklenirken bir hata oluştu:', error);
     }
 });
 
