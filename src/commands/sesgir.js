@@ -15,7 +15,7 @@ module.exports = {
     description: 'Botun belirli bir ses kanalına katılmasını sağlar.',
 
     // Komutun ana mantığını yürüten bir fonksiyon
-    async handleVoiceJoin(interactionOrMessage) {
+    async execute(interactionOrMessage) {
         const client = interactionOrMessage.client;
         const guild = interactionOrMessage.guild;
         
@@ -25,7 +25,7 @@ module.exports = {
         // Kanal bulunamazsa veya ses kanalı değilse hata gönder
         if (!voiceChannel || voiceChannel.type !== ChannelType.GuildVoice) {
             const replyMessage = 'Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isCommand()) {
                 await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(replyMessage);
@@ -43,7 +43,7 @@ module.exports = {
             
             // Başarılı olduğunu belirt
             const successMessage = '`Bot ses kanalına katıldı.`';
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isCommand()) {
                 await interactionOrMessage.reply({ content: successMessage });
             } else {
                 await interactionOrMessage.channel.send(successMessage);
@@ -51,21 +51,11 @@ module.exports = {
         } catch (error) {
             console.error('Ses kanalına katılma hatası:', error);
             const errorMessage = 'Ses kanalına katılırken bir hata oluştu.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isCommand()) {
                 await interactionOrMessage.reply({ content: errorMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(errorMessage);
             }
         }
-    },
-
-    // Prefix komutları için metot
-    async execute(client, message) {
-        await this.handleVoiceJoin(message);
-    },
-
-    // Slash komutları için metot
-    async interact(interaction) {
-        await this.handleVoiceJoin(interaction);
     },
 };
