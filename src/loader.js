@@ -14,14 +14,19 @@ module.exports = (client) => {
     for (const file of eventFiles) {
         const filePath = path.join(eventsPath, file);
         const event = require(filePath);
-        const eventName = file.replace('.js', '');
 
-        if (event.once) {
-            client.once(eventName, (...args) => event(client, ...args));
+        // Olay dosyasının doğru yapıda olup olmadığını kontrol et
+        if (event.name && event.execute) {
+            const eventName = event.name;
+            if (event.once) {
+                client.once(eventName, (...args) => event.execute(client, ...args));
+            } else {
+                client.on(eventName, (...args) => event.execute(client, ...args));
+            }
+            console.log(`[EVENT] ${eventName} olayı yüklendi.`);
         } else {
-            client.on(eventName, (...args) => event(client, ...args));
+            console.warn(`[UYARI] ${file} dosyası geçerli bir olay dosyası değil.`);
         }
-        console.log(`Olay yüklendi: ${eventName}`);
     }
 
     // Komutları Yükle
@@ -35,10 +40,10 @@ module.exports = (client) => {
         // Komutun tipini kontrol et
         if (command.data && command.data.name) { // Eğer slash komutuysa
             client.slashCommands.set(command.data.name, command);
-            console.log(`Slash Komut yüklendi: ${command.data.name}`);
+            console.log(`[KOMUT] Slash Komut yüklendi: ${command.data.name}`);
         } else if ('name' in command && 'execute' in command) { // Eğer normal (ön-ekli) komutsa
             client.commands.set(command.name, command);
-            console.log(`Normal Komut yüklendi: ${command.name}`);
+            console.log(`[KOMUT] Normal Komut yüklendi: ${command.name}`);
         } else {
             console.warn(`[UYARI] ${file} dosyasında 'data' veya 'name/execute' özelliği eksik. Bu komut yüklenmedi.`);
         }
@@ -52,6 +57,6 @@ module.exports = (client) => {
         const filePath = path.join(utilsPath, file);
         const module = require(filePath);
         module(client);
-        console.log(`Yardımcı modül yüklendi: ${file}`);
+        console.log(`[MODÜL] Yardımcı modül yüklendi: ${file}`);
     }
 };
