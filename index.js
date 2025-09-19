@@ -44,19 +44,19 @@ client.on('ready', async () => {
     }
 
     // Yeni ve doğru API versiyonunu (v10) kullanıyoruz
-    const rest = new REST({ version: '10' }).setToken(client.config.TOKEN);
+    const rest = new REST({ version: '10' }).setToken(client.config.token);
 
     try {
-        console.log('(/) Komutları yenileniyor...');
+        console.log('(/) Komutlar yenileniyor...');
         
         // Komutları global yerine sunucuya özel yüklüyoruz.
-        // Bu çok daha hızlıdır. GUILD_ID'yi config.js'den alıyor.
+        // Bu çok daha hızlıdır.
         await rest.put(
-            Routes.applicationGuildCommands(client.config.CLIENT_ID, client.config.GUILD_ID),
+            Routes.applicationGuildCommands(client.config.clientId, client.config.guildId),
             { body: slashCommands },
         );
 
-        console.log('(/) Komutları başarıyla yüklendi!');
+        console.log('(/) Komutlar başarıyla yüklendi!');
     } catch (error) {
         console.error('(/) Komut yüklenirken bir hata oluştu:', error);
     }
