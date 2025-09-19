@@ -1,48 +1,31 @@
-const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, Events } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
-// Yapılandırma dosyasını içe aktar
 const config = require('./config.js');
-// Bot istemcisini oluştur ve ayarlarını yap
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.MessageContent, // v14 için zorunlu olan mesaj içeriği yetkisi
-        GatewayIntentBits.GuildMembers, // Üye log ve bilgileri için
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User],
 });
 
-// Yapılandırma ve komut koleksiyonlarını global hale getir
 client.config = config;
 client.commands = new Collection();
 client.slashCommands = new Collection();
 
-// Komut ve olayları yükle
-const commandsPath = path.join(__dirname, 'src/commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const slashCommands = [];
 
-for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    if ('name' in command) {
-        client.commands.set(command.name, command);
-        if (command.aliases) {
-            command.aliases.forEach(alias => client.commands.set(alias, command));
-        }
-    }
-    if ('data' in command) {
-        client.slashCommands.set(command.data.name, command);
-    }
-}
-
+// Events (Olaylar) yükleyici
 const eventsPath = path.join(__dirname, 'src/events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
@@ -56,18 +39,25 @@ for (const file of eventFiles) {
     }
 }
 
-// client.on('ready', ...'nin içine koyacağın yeni kod bloğu
-client.on('ready', async () => {
+// Commands (Komutlar) yükleyici
+const commandsPath = path.join(__dirname, 'src/commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    if ('data' in command && 'interact' in command) {
+        client.slashCommands.set(command.data.name, command);
+        slashCommands.push(command.data.toJSON());
+    }
+    if ('name' in command && 'execute' in command) {
+        client.commands.set(command.name, command);
+    }
+}
+
+client.on(Events.ClientReady, async () => {
     console.log(`${client.user.tag} olarak giriş yapıldı!`);
     
-    // Slash komutlarını bir diziye topla
-    const slashCommands = [];
-    for (const command of client.slashCommands.values()) {
-        if (command.data) {
-            slashCommands.push(command.data.toJSON());
-        }
-    }
-
     const rest = new REST({ version: '10' }).setToken(client.config.token);
 
     try {
@@ -84,7 +74,6 @@ client.on('ready', async () => {
     }
 });
 
-// --- WEB SUNUCUSU KISMI BAŞLANGIÇ ---
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -95,9 +84,7 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log(`Web sunucusu ${port} portunda çalışıyor.`);
 });
-// --- WEB SUNUCUSU KISMI BİTİŞ ---
 
-// Botu başlat
 client.login(client.config.token).catch(err => {
     console.error("Bot başlatılırken bir hata oluştu: ", err);
     process.exit(1);
