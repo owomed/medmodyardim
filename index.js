@@ -1,4 +1,3 @@
-// Gerekli modülleri içe aktar
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
@@ -25,11 +24,37 @@ const client = new Client({
 client.config = config;
 client.commands = new Collection();
 client.slashCommands = new Collection();
-const slashCommands = []; // Slash komutlarını tutmak için bir dizi
 
-// Loader dosyasını çağırarak tüm komutları, olayları ve yardımcı modülleri yükle
-// Loader, komutları yükleyerek client.commands koleksiyonunu dolduracak
-require('./src/loader.js')(client);
+// Komut ve olayları yükle
+const commandsPath = path.join(__dirname, 'src/commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    if ('name' in command) {
+        client.commands.set(command.name, command);
+        if (command.aliases) {
+            command.aliases.forEach(alias => client.commands.set(alias, command));
+        }
+    }
+    if ('data' in command) {
+        client.slashCommands.set(command.data.name, command);
+    }
+}
+
+const eventsPath = path.join(__dirname, 'src/events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args));
+    }
+}
 
 // client.on('ready', ...'nin içine koyacağın yeni kod bloğu
 client.on('ready', async () => {
@@ -43,14 +68,11 @@ client.on('ready', async () => {
         }
     }
 
-    // Yeni ve doğru API versiyonunu (v10) kullanıyoruz
     const rest = new REST({ version: '10' }).setToken(client.config.token);
 
     try {
         console.log('(/) Komutlar yenileniyor...');
         
-        // Komutları global yerine sunucuya özel yüklüyoruz.
-        // Bu çok daha hızlıdır.
         await rest.put(
             Routes.applicationGuildCommands(client.config.clientId, client.config.guildId),
             { body: slashCommands },
