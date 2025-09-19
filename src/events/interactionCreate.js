@@ -8,7 +8,35 @@ const infoRolesCommand = require('../commands/infoRoles');
 let ticketCounter = 1; // Ticket sayacı (bot her başlatıldığında 1'e sıfırlanır)
 
 module.exports = async (client, interaction) => {
-    // Sadece Select Menu veya Button etkileşimlerini işle
+
+    // --- ÖNCELİK 1: Sadece Slash Komut Etkileşimlerini İşle
+    if (interaction.isCommand()) {
+        const command = client.slashCommands.get(interaction.commandName);
+
+        if (!command) {
+            console.error(`[HATA] ${interaction.commandName} adında bir komut bulunamadı.`);
+            await interaction.reply({ content: 'Bu komutu çalıştırırken bir hata oluştu!', ephemeral: true });
+            return;
+        }
+
+        try {
+            // Komut dosyasında 'interact' metodu varsa onu, yoksa 'execute' metodunu çalıştır
+            if (command.interact) {
+                await command.interact(interaction);
+            } else if (command.execute) {
+                await command.execute(interaction);
+            } else {
+                console.error(`[UYARI] ${interaction.commandName} komut dosyasında 'interact' veya 'execute' metotları bulunamadı.`);
+                await interaction.reply({ content: 'Bu komutu çalıştıramıyorum, geliştirici ile iletişime geçin.', ephemeral: true });
+            }
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'Bu komutu çalıştırırken bir hata oluştu!', ephemeral: true });
+        }
+        return; // İşlem tamamlandı, diğer kontrollere geçmeye gerek yok
+    }
+
+    // --- ÖNCELİK 2: Diğer Etkileşimleri (Select Menu veya Button) İşle
     if (!interaction.isSelectMenu() && !interaction.isButton()) {
         return;
     }
@@ -16,7 +44,7 @@ module.exports = async (client, interaction) => {
     const customId = interaction.customId;
     const req = customId.split('_')[0]; // Ticket sistemi customId'lerinin ilk kısmını alır
 
-    // --- ÖNCELİK 1: SELECT MENU Etkileşimlerini İşle (Rol Alma Menüleri) ---
+    // --- SELECT MENU Etkileşimlerini İşle (Rol Alma Menüleri) ---
     if (interaction.isSelectMenu()) {
         // Renk rolü etkileşimini işle
         if (customId === 'colorSelect') {
@@ -31,7 +59,7 @@ module.exports = async (client, interaction) => {
         }
     }
 
-    // --- ÖNCELİK 2: BUTON Etkileşimlerini İşle (Ticket Sistemi Butonları) ---
+    // --- BUTON Etkileşimlerini İşle (Ticket Sistemi Butonları) ---
     if (interaction.isButton()) {
         const categoryId = '1268509251911811175'; // Ticket Kategori ID'si
 
@@ -86,7 +114,7 @@ module.exports = async (client, interaction) => {
 
                 const row = new ActionRowBuilder().addComponents(closeButton);
 
-                return interaction.reply({ content: `Biletiniz Açıldı <#${channel.id}> ✅`, components: [], ephemeral: true });
+                return interaction.reply({ content: `Biletiniz Açıldı <#${channel.id}> ✅`, components: [row], ephemeral: true });
             }
 
             case 'closeTicket': {
