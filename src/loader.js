@@ -3,9 +3,10 @@ const path = require('path');
 const { Collection } = require('discord.js');
 
 module.exports = (client) => {
-    // Komutları saklamak için bir Collection oluştur
+    // Komutları saklamak için Collection'ları oluştur
     client.commands = new Collection();
-    
+    client.slashCommands = new Collection(); // Slash komutları için yeni Collection
+
     // Olay Dinleyicilerini Yükle
     const eventsPath = path.join(__dirname, 'events');
     const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
@@ -15,7 +16,6 @@ module.exports = (client) => {
         const event = require(filePath);
         const eventName = file.replace('.js', '');
 
-        // `once` olayı için özel işlem (örn. `ready` olayı)
         if (event.once) {
             client.once(eventName, (...args) => event(client, ...args));
         } else {
@@ -31,11 +31,16 @@ module.exports = (client) => {
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
         const command = require(filePath);
-        if ('name' in command && 'execute' in command) {
+        
+        // Komutun tipini kontrol et
+        if (command.data && command.data.name) { // Eğer slash komutuysa
+            client.slashCommands.set(command.data.name, command);
+            console.log(`Slash Komut yüklendi: ${command.data.name}`);
+        } else if ('name' in command && 'execute' in command) { // Eğer normal (ön-ekli) komutsa
             client.commands.set(command.name, command);
-            console.log(`Komut yüklendi: ${command.name}`);
+            console.log(`Normal Komut yüklendi: ${command.name}`);
         } else {
-            console.warn(`[UYARI] ${file} dosyasında 'name' veya 'execute' özelliği eksik. Bu komut yüklenmedi.`);
+            console.warn(`[UYARI] ${file} dosyasında 'data' veya 'name/execute' özelliği eksik. Bu komut yüklenmedi.`);
         }
     }
 
@@ -43,11 +48,10 @@ module.exports = (client) => {
     const utilsPath = path.join(__dirname, 'utils');
     const utilityFiles = fs.readdirSync(utilsPath).filter(file => file.endsWith('.js'));
     
-    // Her bir yardımcı modülü yükle
     for (const file of utilityFiles) {
         const filePath = path.join(utilsPath, file);
         const module = require(filePath);
-        module(client); // Bu modüller zaten client objesini bekliyor
+        module(client);
         console.log(`Yardımcı modül yüklendi: ${file}`);
     }
 };
