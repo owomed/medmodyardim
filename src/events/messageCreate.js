@@ -2,7 +2,9 @@ const { Events, ChannelType } = require('discord.js');
 
 module.exports = {
     name: Events.MessageCreate,
-    async execute(client, message) {
+    async execute(message) { // Sadece 'message' parametresini alarak Discord.js olay standardına uyum sağla
+        const client = message.client;
+
         // Botların kendi mesajlarını veya DM'leri (özel mesajları) göz ardı et
         if (message.author.bot || message.channel.type === ChannelType.DM) return;
 
@@ -12,7 +14,6 @@ module.exports = {
         // --- ÖZEL SİSTEMLER ---
 
         // Yukarı/Emoji Tepki Sistemi
-        // client.config.CHANNEL1_ID ve EMOJI ID'nizin doğru olduğundan emin olun
         const CHANNEL1_ID = client.config.CHANNEL1_ID;
         const EMOJI = '1235321947035013231';
 
@@ -35,8 +36,8 @@ module.exports = {
         // Eğer komut bulunursa çalıştır
         if (cmd) {
             try {
-                // Komut dosyasının 'execute' metodunu çalıştırırken client, message ve args argümanlarını doğru bir şekilde ilet
-                await cmd.execute(client, message, args);
+                // Komut dosyasının 'execute' metoduna sadece 'message' ve 'args' argümanlarını gönder
+                await cmd.execute(message, args);
             } catch (error) {
                 console.error(`Komut çalıştırılırken bir hata oluştu: ${commandName}`, error);
                 message.reply('Bu komutu çalıştırırken bir hata oluştu! Lütfen daha sonra tekrar deneyin.');
