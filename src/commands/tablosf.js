@@ -18,16 +18,22 @@ module.exports = {
     // Prefix komutu için ad
     name: 'agayapsuisi',
     description: 'Puan tablosunu gösterir ve ardından sıfırlar',
+    aliases: ['tablosf'], // Slash komutu adını takma ad olarak ekler
 
     // Bu komutun işleyeceği ana fonksiyon
     async handleCommand(interactionOrMessage) {
         const client = interactionOrMessage.client;
 
-        // Rol kontrolü: Prefix komutu için senin orijinal isteğini koruyoruz.
-        if (!interactionOrMessage.isChatInputCommand()) {
-            if (!interactionOrMessage.member.roles.cache.has(allowedRoleId)) {
-                return interactionOrMessage.channel.send('Bu komutu kullanma izniniz yok.');
+        // Rol kontrolü: Prefix komutu için orijinal yetki kontrolünü koruyoruz.
+        if (!interactionOrMessage.member.roles.cache.has(allowedRoleId) && !interactionOrMessage.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            const replyMessage = 'Bu komutu kullanma izniniz yok.';
+            if (interactionOrMessage.isChatInputCommand()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+                await interactionOrMessage.delete().catch(console.error);
             }
+            return;
         }
 
         // Puanları JSON dosyasından yükle
@@ -68,34 +74,33 @@ module.exports = {
             await interactionOrMessage.channel.send({ embeds: [embed] });
         }
         
-        // Global puan değişkenini sıfırla ve dosyaya kaydet
+        // Global puan değişkenini sıfırla ve dosyayı silerek kaydet
         if (fs.existsSync(pointsFilePath)) {
             fs.unlinkSync(pointsFilePath); // Dosyayı silerek sıfırlama
         }
         
         const successMessage = 'Puan tablosu sıfırlandı.';
         if (interactionOrMessage.isChatInputCommand()) {
-            // İlk yanıtı düzenle veya yeni bir yanıt gönder
             await interactionOrMessage.followUp({ content: successMessage, ephemeral: false });
         } else {
             await interactionOrMessage.channel.send(successMessage);
         }
     },
 
-    // Prefix komutları için metot
-    async execute(client, message) {
+    /**
+     * Prefix komutları için metot
+     * @param {import('discord.js').Client} client 
+     * @param {import('discord.js').Message} message 
+     */
+    async execute(message) {
         await this.handleCommand(message);
     },
 
-    // Slash komutları için metot
+    /**
+     * Slash komutları için metot
+     * @param {import('discord.js').Interaction} interaction
+     */
     async interact(interaction) {
         await this.handleCommand(interaction);
     }
 };
-
-// Not: Bu dosyada bulunan `resetGame` ve `revealNumber` fonksiyonları
-// ana `execute` akışınızın bir parçası değildir. Bu fonksiyonlar,
-// botunuzun ana dosyasındaki (index.js) bir oyun döngüsü tarafından
-// yönetilmelidir. Bu dosya sadece komutun kendisini içerir.
-// Eğer bu fonksiyonları kullanacaksanız, ana dosyanızda
-// `client` objesi üzerinde yönettiğinizden emin olun.
