@@ -4,35 +4,26 @@ module.exports = {
     // Slash komutu verisi
     data: new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Botun pingini gösterir.'),
-
-    // Prefix komutu için isim ve takma adlar
-    name: 'ping',
-    aliases: ['p'],
-
-    /**
-     * Hem prefix hem de slash komutları için ortak metot
-     * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
-     */
-    async execute(interactionOrMessage) {
-        // Eğer bir etkileşim (slash komutu) ise
-        if (interactionOrMessage.isChatInputCommand()) {
-            await interactionOrMessage.reply({ content: `😉 yaptığım botun pingi :D => **${interactionOrMessage.client.ws.ping}ms**`, ephemeral: false });
-        }
-        // Eğer bir mesaj (prefix komutu) ise
-        else {
-            const sentMessage = await interactionOrMessage.channel.send(`😉 yaptığım botun pingi :D => **${interactionOrMessage.client.ws.ping}ms**`);
-            // Komut mesajını sil
-            await interactionOrMessage.delete().catch(console.error);
-        }
-    },
+        .setDescription('Botun gecikme süresini gösterir.'),
     
-    /**
-     * Slash komut etkileşimlerini işlemek için kullanılan metot.
-     * execute() metodunu çağırır.
-     * @param {import('discord.js').Interaction} interaction 
-     */
+    // Prefix komutu için ad
+    name: 'ping',
+    description: 'Botun gecikme süresini gösterir.',
+    aliases: ['gecikme'], // ping için bir takma ad
+
+    // Prefix komutları için metot
+    async execute(message) {
+        const sent = await message.reply('Pinging...');
+        sent.edit(`Pong! Gecikme: ${sent.createdTimestamp - message.createdTimestamp}ms`);
+    },
+
+    // Slash komutları için metot
     async interact(interaction) {
-        await this.execute(interaction);
+        // Gecikme süresini hesaplamak için etkileşim yanıtını ertele
+        await interaction.deferReply({ ephemeral: true });
+
+        const sent = await interaction.editReply({ content: 'Pinging...', fetchReply: true });
+        
+        await interaction.editReply(`Pong! Gecikme: ${sent.createdTimestamp - interaction.createdTimestamp}ms`);
     },
 };
