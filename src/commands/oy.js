@@ -19,7 +19,11 @@ module.exports = {
     description: 'Belirtilen kullanıcının son etiketleme mesajını gösterir',
     aliases: ['oyk'], // İsteğe bağlı, ek takma adlar ekleyebilirsiniz.
 
-    // Komutun ana mantığını yürüten bir fonksiyon
+    /**
+     * Komutun ana mantığını yürüten fonksiyon. Hem slash hem de prefix komutları tarafından çağrılır.
+     * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
+     * @param {import('discord.js').User} targetUser
+     */
     async handleOyCommand(interactionOrMessage, targetUser) {
         const client = interactionOrMessage.client;
         const targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
@@ -117,7 +121,7 @@ module.exports = {
     },
 
     // Prefix komutları için metot
-    async execute(client, message, args) {
+    async execute(message, args) {
         if (!args.length) {
             return message.reply("Lütfen bir kullanıcı ID'si girin.").then(msg => {
                 setTimeout(() => msg.delete(), 5000);
@@ -128,7 +132,7 @@ module.exports = {
         const targetUserId = args[0];
         let targetUser;
         try {
-            targetUser = await client.users.fetch(targetUserId);
+            targetUser = await message.client.users.fetch(targetUserId);
         } catch (error) {
             console.error(`Kullanıcı ID'si (${targetUserId}) alınırken hata oluştu:`, error);
             return message.channel.send("Girilen ID ile bir kullanıcı bulunamadı.");
