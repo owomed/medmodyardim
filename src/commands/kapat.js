@@ -13,7 +13,13 @@ module.exports = {
     
     // Prefix komutu için ad
     name: 'kapat',
-    
+    aliases: ['close', 'ticketkapat'], // Ekstra komut adları
+
+    /**
+     * Hem prefix hem de slash komutları için ana işlevi çalıştırır.
+     * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
+     * @param {string[]} [args] - Prefix komutu için argümanlar (isteğe bağlı)
+     */
     async execute(interactionOrMessage, args) {
         // Komutun türüne göre yetki kontrolü ve kanal tespiti
         let member, channelToClose;
@@ -79,5 +85,14 @@ module.exports = {
                 await interactionOrMessage.channel.send(errorMessage);
             }
         }
+    },
+
+    /**
+     * Slash komut etkileşimlerini işlemek için kullanılan metot.
+     * execute() metodunu çağırır.
+     * @param {import('discord.js').Interaction} interaction 
+     */
+    async interact(interaction) {
+        await this.execute(interaction);
     },
 };
