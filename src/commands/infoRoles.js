@@ -1,4 +1,4 @@
-const { ActionRowBuilder, SelectMenuBuilder, SlashCommandBuilder } = require('discord.js');
+const { ActionRowBuilder, StringSelectMenuBuilder, SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
     // Slash komutu için veri
@@ -8,9 +8,14 @@ module.exports = {
     
     // Prefix komutu için ad
     name: 'bilgi',
+    aliases: ['bilgiler'],
 
-    // Hem prefix hem de slash için çalışacak fonksiyon
-    async execute(interactionOrMessage) {
+    /**
+     * Hem prefix hem de slash komutları için ana işlevi çalıştırır.
+     * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
+     * @param {string[]} args - Prefix komutu için argümanlar
+     */
+    async execute(interactionOrMessage, args) {
         const roles = [
             { label: 'Autohunt Hakkında Bilgi İçin', value: '1235288469413302306', emoji: '<:Autohunt:1238391358809706528>' },
             { label: 'Silahlar Hakkında Bilgi İçin', value: '1235289050517340241', emoji: '<:Silahlar:1235694153816473741>' },
@@ -24,7 +29,7 @@ module.exports = {
         }));
 
         const row = new ActionRowBuilder().addComponents(
-            new SelectMenuBuilder()
+            new StringSelectMenuBuilder()
                 .setCustomId('BilgiSelect')
                 .setPlaceholder('Bilgi Rolleri')
                 .setMinValues(0)
@@ -42,15 +47,32 @@ module.exports = {
         }
     },
     
-    // Bilgi rolü etkileşimlerini burada işliyoruz.
-    // interactionCreate olayına eklenecek kısım
+    /**
+     * Slash komut etkileşimlerini işlemek için kullanılan metot.
+     * execute() metodunu çağırır.
+     * @param {import('discord.js').Interaction} interaction 
+     */
+    async interact(interaction) {
+        await this.execute(interaction);
+    },
+    
+    /**
+     * Bilgi rolü seçme menüsü etkileşimini işler.
+     * Bu metot, interactionCreate event'i tarafından çağrılacaktır.
+     * @param {import('discord.js').Client} client
+     * @param {import('discord.js').StringSelectMenuInteraction} interaction 
+     */
     async handleInteraction(client, interaction) {
-        if (!interaction.isSelectMenu() || interaction.customId !== 'BilgiSelect') return;
+        if (!interaction.isStringSelectMenu() || interaction.customId !== 'BilgiSelect') return;
 
         const { values, member, guild } = interaction;
         const selectedRoleIDs = values;
         
-        // config dosyan yoksa veya kullanmıyorsan buradaki örnek verileri kullanabilirsin
+        if (!guild) {
+            await interaction.reply({ content: 'Bu etkileşim bir sunucuda yapılmalı.', ephemeral: true });
+            return;
+        }
+
         const BilgiRoleMap = {
             '1235288469413302306': 'Autohunt',
             '1235289050517340241': 'Silahlar',
@@ -59,15 +81,18 @@ module.exports = {
 
         for (const roleID of Object.keys(BilgiRoleMap)) {
             const role = guild.roles.cache.get(roleID);
-            if (!role) continue;
+            if (!role) {
+                console.error(`Rol bulunamadı: ${BilgiRoleMap[roleID]} (${roleID})`);
+                continue;
+            }
 
             if (selectedRoleIDs.includes(roleID)) {
                 if (!member.roles.cache.has(roleID)) {
-                    await member.roles.add(roleID);
+                    await member.roles.add(roleID).catch(console.error);
                 }
             } else {
                 if (member.roles.cache.has(roleID)) {
-                    await member.roles.remove(roleID);
+                    await member.roles.remove(roleID).catch(console.error);
                 }
             }
         }
