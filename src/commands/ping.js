@@ -11,15 +11,15 @@ module.exports = {
     description: 'Botun pingini gösterir.',
     aliases: ['p'],
 
-    // Prefix komutları için metot
-    execute(client, message) {
-        // Ping değerini al ve kanala gönder
-        message.channel.send(`😉 yaptığım botun pingi :D => **${client.ws.ping}ms**`);
-    },
-
-    // Slash komutları için metot
-    async interact(interaction) {
-        // Ping değerini al ve etkileşime yanıt ver
-        await interaction.reply({ content: `😉 yaptığım botun pingi :D => **${interaction.client.ws.ping}ms**`, ephemeral: false });
+    // Hem prefix hem de slash komutları için ortak metot
+    async execute(interactionOrMessage) {
+        // Eğer bir etkileşim (slash komutu) ise
+        if (interactionOrMessage.isCommand()) {
+            await interactionOrMessage.reply({ content: `😉 yaptığım botun pingi :D => **${interactionOrMessage.client.ws.ping}ms**`, ephemeral: false });
+        } 
+        // Eğer bir mesaj (prefix komutu) ise
+        else {
+            interactionOrMessage.channel.send(`😉 yaptığım botun pingi :D => **${interactionOrMessage.client.ws.ping}ms**`);
+        }
     },
 };
