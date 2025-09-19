@@ -7,22 +7,18 @@ module.exports = {
         .setDescription('Ticket sayısını sıfırlar.')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator), // En iyi yöntem: Slash komutu için yetkiyi burada tanımla
     
-    // Prefix komutu için ad
+    // Prefix komutu için ad ve takma adlar
     name: 'resetle',
-    
-    // Hem prefix hem de slash için çalışacak fonksiyon
+    aliases: ['sıfırla'],
+
+    /**
+     * Hem prefix hem de slash için çalışacak ortak fonksiyon
+     * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
+     */
     async execute(interactionOrMessage) {
         // Komutun türüne göre yetki kontrolü
-        let hasPermission = false;
-        if (interactionOrMessage.isChatInputCommand()) {
-            // Slash komutu için güncel yetki kontrolü
-            hasPermission = interactionOrMessage.member.permissions.has(PermissionsBitField.Flags.Administrator);
-        } else {
-            // Prefix komutu için kullanıcıdan gelen eski yetki kontrolü
-            // Bu, Discord.js v14'te hata verebilir, bu yüzden slash komutu için farklı bir yöntem kullanıyoruz.
-            const { Permissions } = require('discord.js');
-            hasPermission = interactionOrMessage.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR);
-        }
+        // Hem slash hem de prefix için PermissionsBitField kullanmak en iyisidir.
+        const hasPermission = interactionOrMessage.member.permissions.has(PermissionsBitField.Flags.Administrator);
         
         if (!hasPermission) {
             const replyMessage = 'Bu komutu kullanabilmek için yönetici yetkisine sahip olmalısınız.';
@@ -30,6 +26,7 @@ module.exports = {
                 await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(replyMessage);
+                await interactionOrMessage.delete().catch(console.error);
             }
             return;
         }
@@ -44,5 +41,14 @@ module.exports = {
         } else {
             await interactionOrMessage.channel.send(successMessage);
         }
+    },
+
+    /**
+     * Slash komut etkileşimlerini işlemek için kullanılan metot.
+     * execute() metodunu çağırır.
+     * @param {import('discord.js').Interaction} interaction 
+     */
+    async interact(interaction) {
+        await this.execute(interaction);
     },
 };
