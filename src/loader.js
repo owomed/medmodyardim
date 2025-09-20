@@ -33,24 +33,30 @@ for (const file of eventFiles) {
 }
 
     // Komutları Yükle
-    const commandsPath = path.join(__dirname, 'commands');
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
-        
-        // Komutun tipini kontrol et
-        if (command.data && command.data.name) { // Eğer slash komutuysa
-            client.slashCommands.set(command.data.name, command);
-            console.log(`Slash Komut yüklendi: ${command.data.name}`);
-        } else if ('name' in command && 'execute' in command) { // Eğer normal (ön-ekli) komutsa
-            client.commands.set(command.name, command);
-            console.log(`Normal Komut yüklendi: ${command.name}`);
-        } else {
-            console.warn(`[UYARI] ${file} dosyasında 'data' veya 'name/execute' özelliği eksik. Bu komut yüklenmedi.`);
-        }
+for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+
+    // Eğer slash komutuysa yükle
+    if (command.data && command.data.name) {
+        client.slashCommands.set(command.data.name, command);
+        console.log(`Slash Komut yüklendi: ${command.data.name}`);
     }
+
+    // Eğer normal (ön-ekli) komutsa yükle
+    if ('name' in command && 'execute' in command) {
+        client.commands.set(command.name, command);
+        console.log(`Normal Komut yüklendi: ${command.name}`);
+    }
+
+    // Ne slash ne de prefix komutu değilse uyarı ver
+    if (!command.data && !('name' in command)) {
+        console.warn(`[UYARI] ${file} dosyasında geçerli komut verisi eksik. Bu komut yüklenmedi.`);
+    }
+}
 
     // Ekstra Modülleri Yükle
     const utilsPath = path.join(__dirname, 'utils');
