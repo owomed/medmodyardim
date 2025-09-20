@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
 
 // Sabit kanal ID'si ve emoji, kod tekrarını önlemek için burada tanımlanabilir.
 const TARGET_CHANNEL_ID = '1238040770888339519';
@@ -31,7 +31,7 @@ module.exports = {
         // Hata kontrolü
         if (!targetChannel) {
             const replyMessage = 'Belirtilen kanal bulunamadı. Lütfen kanal ID\'sinin doğru olduğundan emin olun.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 return interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 return interactionOrMessage.channel.send(replyMessage);
@@ -45,7 +45,7 @@ module.exports = {
         } catch (error) {
             console.error('Mesajlar alınırken bir hata oluştu:', error);
             const replyMessage = 'Mesajlar alınırken bir hata oluştu.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 return interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 return interactionOrMessage.channel.send(replyMessage);
@@ -54,7 +54,7 @@ module.exports = {
 
         if (!targetMessage) {
             const replyMessage = `${targetUser.username} kullanıcısı bu kanalda etiketlenmemiş.`;
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 return interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 return interactionOrMessage.channel.send(replyMessage);
@@ -113,7 +113,7 @@ module.exports = {
             .setFooter({ text: `Mesaj ID: ${targetMessage.id}` });
         
         // Komutu çalıştıran kaynağa (mesaj ya da etkileşim) yanıt gönderme
-        if (interactionOrMessage.isChatInputCommand()) {
+        if (interactionOrMessage.isChatInputCommand?.()) {
             await interactionOrMessage.reply({ embeds: [embed] });
         } else {
             await interactionOrMessage.channel.send({ embeds: [embed] });
@@ -121,15 +121,18 @@ module.exports = {
     },
 
     // Prefix komutları için metot
-    async execute(message, args) {
+    async execute(client, message, args) {
+        // DM kontrolü
+        if (message.channel.type === ChannelType.DM) {
+            return message.channel.send('Bu komut DM\'lerde kullanılamaz.');
+        }
+
         if (!args.length) {
-            return message.reply("Lütfen bir kullanıcı ID'si girin.").then(msg => {
-                setTimeout(() => msg.delete(), 5000);
-                message.delete().catch(err => console.error('Orijinal mesaj silinirken hata oluştu:', err));
-            });
+            return message.channel.send("Lütfen bir kullanıcı etiketleyin veya ID'si girin.");
         }
         
-        const targetUserId = args[0];
+        const targetUserId = args[0].replace(/[<@!>]/g, '');
+        
         let targetUser;
         try {
             targetUser = await message.client.users.fetch(targetUserId);
