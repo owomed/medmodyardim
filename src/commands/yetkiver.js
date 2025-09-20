@@ -170,13 +170,14 @@ module.exports = {
             return;
         }
 
-        // Komutu çalıştıran kişinin tam GuildMember objesini çek
-        const member = await message.guild.members.fetch(message.author.id).catch(console.error);
+        const member = await message.guild.members.fetch(message.author.id).catch(err => {
+            console.error("Yetkiver komutunda üye çekme hatası:", err);
+            return null;
+        });
         if (!member) {
             return message.channel.send('Üye bilgileri alınırken bir hata oluştu.');
         }
 
-        // Yetki kontrolü
         if (!member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
             return message.channel.send('Bu komutu kullanma yetkiniz yok.');
         }
@@ -191,13 +192,14 @@ module.exports = {
             return;
         }
 
-        // Komutu çalıştıran kişinin tam GuildMember objesini çek
-        const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error);
+        const member = await interaction.guild.members.fetch(interaction.user.id).catch(err => {
+            console.error("Yetkiver komutunda üye çekme hatası:", err);
+            return null;
+        });
         if (!member) {
             return interaction.reply({ content: 'Üye bilgileri alınırken bir hata oluştu.', ephemeral: true });
         }
         
-        // Yetki kontrolü (sadece bu komut için)
         if (!member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
             return interaction.reply({ content: 'Bu komutu kullanma yetkiniz yok.', ephemeral: true });
         }
