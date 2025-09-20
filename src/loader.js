@@ -7,30 +7,30 @@ module.exports = (client) => {
     client.commands = new Collection();
     client.slashCommands = new Collection(); // Slash komutları için yeni Collection
 
-    // Olay Dinleyicilerini Yükle
     const eventsPath = path.join(__dirname, 'events');
-    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
-    for (const file of eventFiles) {
-        const filePath = path.join(eventsPath, file);
-        const event = require(filePath);
-        const eventName = file.replace('.js', '');
+for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+    const eventName = file.replace('.js', '');
 
-        // Olayın bir fonksiyon mu yoksa 'execute' metoduna sahip bir nesne mi olduğunu kontrol et
-        const eventHandler = event.execute || event;
+    const eventHandler = event.execute || event;
 
-        if (typeof eventHandler !== 'function') {
-            console.warn(`[UYARI] ${file} dosyası geçerli bir olay işleyici değil. Yüklenmedi.`);
-            continue;
-        }
-
-        if (event.once) {
-            client.once(eventName, (...args) => eventHandler(client, ...args));
-        } else {
-            client.on(eventName, (...args) => eventHandler(client, ...args));
-        }
-        console.log(`Olay yüklendi: ${eventName}`);
+    if (typeof eventHandler !== 'function') {
+        console.warn(`[UYARI] ${file} dosyası geçerli bir olay işleyici değil. Yüklenmedi.`);
+        continue;
     }
+
+    if (event.once) {
+        // Parametreleri direkt olarak 'eventHandler'a iletiyoruz
+        client.once(eventName, (...args) => eventHandler(...args));
+    } else {
+        // Parametreleri direkt olarak 'eventHandler'a iletiyoruz
+        client.on(eventName, (...args) => eventHandler(...args));
+    }
+    console.log(`Olay yüklendi: ${eventName}`);
+}
 
     // Komutları Yükle
     const commandsPath = path.join(__dirname, 'commands');
