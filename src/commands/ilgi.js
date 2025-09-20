@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
 
 module.exports = {
     // Slash komutu için veri
@@ -6,20 +6,30 @@ module.exports = {
         .setName('ilgi')
         .setDescription('Etiketlenen kişiye rastgele bir iltifat eder.')
         .addUserOption(option =>
-            option.setName('kullanıcı')
+            option.setName('kullanici')
                 .setDescription('İltifat edilecek kullanıcıyı etiketleyin.')
                 .setRequired(true)),
 
     // Prefix komutu için ad
     name: 'ilgi',
-    aliases: ['iltifat'], // Ekstra komut adları
+    aliases: ['iltifat'],
 
     /**
-     * Hem prefix hem de slash komutları için ana işlevi çalıştırır.
+     * Hem prefix hem de slash komutları için ana işlevi çalıştıran ortak fonksiyon.
      * @param {import('discord.js').Interaction|import('discord.js').Message} interactionOrMessage
-     * @param {string[]} args - Prefix komutu için argümanlar
+     * @param {import('discord.js').User} targetUser
      */
-    async execute(interactionOrMessage, args) {
+    async handleIlgiCommand(interactionOrMessage, targetUser) {
+        if (!targetUser) {
+            const replyMessage = 'Lütfen bir kullanıcı etiketleyin.';
+            if (interactionOrMessage.isChatInputCommand?.()) {
+                await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
+            } else {
+                await interactionOrMessage.channel.send(replyMessage);
+            }
+            return;
+        }
+
         const iltifatlar = [
             'Günün nasıl geçtiğini merak ediyorum, umarım çok iyi geçiyordur!',
             'Seninle konuşmak her zaman bir zevk!',
@@ -56,32 +66,20 @@ module.exports = {
             'Seninle birlikteyken, her anımızın bir fotoğraf karesine dönüşmesini istiyorum. Çünkü seninle her an ölümsüzleşiyor.'
         ];
 
-        // Komutun türüne göre kullanıcıyı al
-        let user;
-        if (interactionOrMessage.isChatInputCommand()) {
-            user = interactionOrMessage.options.getUser('kullanıcı');
-        } else {
-            user = interactionOrMessage.mentions.users.first();
-            if (!user) {
-                await interactionOrMessage.channel.send('Lütfen bir kişiyi etiketleyin.');
-                return;
-            }
-        }
-
         const iltifat = iltifatlar[Math.floor(Math.random() * iltifatlar.length)];
 
         const embed = new EmbedBuilder()
             .setColor('#b4e5af')
             .setTitle('❤❤❤')
-            .setDescription(`${user.tag}, ${iltifat}`)
-            .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
+            .setDescription(`${targetUser.tag}, ${iltifat}`)
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 1024 }))
             .setFooter({
                 text: 'Developed by Kazolegendd/ Nostalgically edited by hicckimse',
                 iconURL: 'https://cdn.discordapp.com/avatars/1149394269061271562/a_c1715253097d7f531489af59abb3ea05.gif?size=1024'
             });
 
         // Komutun türüne göre farklı yanıt veriyoruz
-        if (interactionOrMessage.isChatInputCommand()) {
+        if (interactionOrMessage.isChatInputCommand?.()) {
             await interactionOrMessage.reply({ embeds: [embed] });
         } else {
             await interactionOrMessage.channel.send({ embeds: [embed] });
@@ -93,12 +91,23 @@ module.exports = {
         }
     },
     
-    /**
-     * Slash komut etkileşimlerini işlemek için kullanılan metot.
-     * execute() metodunu çağırır.
-     * @param {import('discord.js').Interaction} interaction 
-     */
+    // Prefix komutları için metot
+    async execute(client, message, args) {
+        // DM kontrolü
+        if (message.channel.type === ChannelType.DM) {
+            return message.channel.send('Bu komut DM\'lerde kullanılamaz.');
+        }
+
+        const user = message.mentions.users.first();
+        if (!user) {
+            return message.channel.send('Lütfen bir kullanıcıyı etiketleyin.');
+        }
+        await this.handleIlgiCommand(message, user);
+    },
+
+    // Slash komutları için metot
     async interact(interaction) {
-        await this.execute(interaction);
+        const user = interaction.options.getUser('kullanici');
+        await this.handleIlgiCommand(interaction, user);
     },
 };
