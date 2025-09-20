@@ -34,7 +34,7 @@ module.exports = {
         }
 
         // Command Handler
-        const prefix = client.config.PREFIX || '!';
+        const prefix = client.config.prefix || '!';
         if (!message.content.startsWith(prefix)) {
             return;
         }
