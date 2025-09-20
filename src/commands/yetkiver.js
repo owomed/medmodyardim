@@ -70,7 +70,7 @@ module.exports = {
 
         if (!target) {
             const replyMessage = 'Lütfen geçerli bir kullanıcı etiketleyin veya ID girin.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(replyMessage);
@@ -90,7 +90,7 @@ module.exports = {
             .setTitle('Yetki Verme Menüsü')
             .setDescription(`${target} kişisine vermek istediğiniz yetkiyi seçin.`);
 
-        const messageToCollect = await (interactionOrMessage.isChatInputCommand()
+        const messageToCollect = await (interactionOrMessage.isChatInputCommand?.()
             ? interactionOrMessage.reply({ embeds: [initialEmbed], components: [row], ephemeral: true, fetchReply: true })
             : interactionOrMessage.channel.send({ embeds: [initialEmbed], components: [row] })
         );
