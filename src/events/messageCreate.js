@@ -3,24 +3,26 @@ const { Events, ChannelType } = require('discord.js');
 module.exports = {
     name: Events.MessageCreate,
     async execute(message) {
-        // This is the most crucial step: Check if the message is partial.
-        // A partial message is an incomplete object. We must fetch its full data
-        // before trying to access properties like 'author', 'content', etc.
+        // Step 1: Handle partial messages.
+        // This ensures we have a complete message object before proceeding.
         if (message.partial) {
             try {
                 await message.fetch();
             } catch (error) {
-                console.error('Failed to fetch a partial message:', error);
+                console.error('Failed to fetch partial message:', error);
                 return; // Stop execution if fetching fails
             }
         }
-        
-        // Now that we have the full message, we can safely access its properties.
-        // The error on line 19 ('message.author.bot') will no longer occur.
+
+        // Step 2: Stop if the message is from a bot or a DM.
+        // This is the most crucial check for your "tavsiye" command error.
+        // It prevents the bot from processing messages from other bots or DMs.
+        // A DM doesn't have a 'guild', which causes issues later.
         if (message.author.bot || message.channel.type === ChannelType.DM) {
             return;
         }
 
+        // Now that we've handled partial messages and DMs, we can safely proceed.
         const client = message.client;
 
         // --- CUSTOM SYSTEMS ---
@@ -46,10 +48,15 @@ module.exports = {
 
         if (cmd) {
             try {
-                await cmd.execute(message, args);
+                // Here, we provide the correct arguments to the command's execute function.
+                // Your command files expect (client, message, args), so we pass them in that order.
+                await cmd.execute(client, message, args);
             } catch (error) {
                 console.error(`An error occurred while executing command: ${commandName}`, error);
-                message.reply('An error occurred while running this command. Please try again later.');
+                // Reply only in a guild channel to avoid DM errors.
+                if (message.guild) {
+                    message.reply('An error occurred while running this command. Please try again later.');
+                }
             }
         }
     }
