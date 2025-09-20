@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
 
 // Sabit kanal ID'si
 const TAVSIYE_KANAL_ID = '1235593289315651685';
@@ -70,21 +70,19 @@ module.exports = {
         }
     },
 
-    // src/commands/tavsiye.js dosyasındaki execute metodu
+    // Prefix komutları için metot
+    async execute(client, message, args) {
+        // DM kontrolü
+        if (message.channel.type === ChannelType.DM) {
+            return message.reply('Bu komut DM\'lerde kullanılamaz.');
+        }
 
-async execute(client, message, args) {
-    // Eğer args dizisi boşsa veya tanımsızsa,
-    // kullanıcıya bir tavsiye mesajı girmesi gerektiğini söyle ve fonksiyonu durdur.
-    if (!args || args.length === 0) {
-        return message.channel.send('Lütfen bir tavsiye mesajı girin.');
-    }
-    
-    // args dizisini güvenli bir şekilde birleştir
-    const tavsiyeMesaji = args.join(' ');
-    
-    // Ana fonksiyonu çağır
-    await this.handleTavsiyeCommand(message, tavsiyeMesaji);
-},
+        const tavsiyeMesaji = args.join(' ');
+        if (!tavsiyeMesaji) {
+            return message.channel.send('Lütfen bir tavsiye mesajı girin.');
+        }
+        await this.handleTavsiyeCommand(message, tavsiyeMesaji);
+    },
 
     // Slash komutları için metot
     async interact(interaction) {
