@@ -68,8 +68,10 @@ module.exports = {
     async handleYetkiVerCommand(interactionOrMessage, target) {
         const author = interactionOrMessage.author || interactionOrMessage.user;
 
+        // Hem slash hem de prefix komutlarında target kontrolü yapıldı.
         if (!target) {
             const replyMessage = 'Lütfen geçerli bir kullanıcı etiketleyin veya ID girin.';
+            // Hata vermemesi için güvenli kontrol eklendi
             if (interactionOrMessage.isChatInputCommand?.()) {
                 await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
@@ -90,6 +92,7 @@ module.exports = {
             .setTitle('Yetki Verme Menüsü')
             .setDescription(`${target} kişisine vermek istediğiniz yetkiyi seçin.`);
 
+        // interactionOrMessage'ın tipine göre doğru yanıt metodu kullanıldı.
         const messageToCollect = await (interactionOrMessage.isChatInputCommand?.()
             ? interactionOrMessage.reply({ embeds: [initialEmbed], components: [row], ephemeral: true, fetchReply: true })
             : interactionOrMessage.channel.send({ embeds: [initialEmbed], components: [row] })
@@ -184,9 +187,9 @@ module.exports = {
 
         const target = message.mentions.members.first() || await message.guild.members.fetch(args[0]).catch(() => null);
 
-if (!target) {
-        return message.reply('Lütfen yetki vermek istediğiniz kişiyi etiketleyin veya ID\'sini girin.');
-    }
+        if (!target) {
+            return message.channel.send('Lütfen yetki vermek istediğiniz kişiyi etiketleyin veya ID\'sini girin.');
+        }
         await this.handleYetkiVerCommand(message, target);
     },
 
