@@ -70,14 +70,21 @@ module.exports = {
         }
     },
 
-    // Prefix komutları için metot
-    async execute(client, message, args) {
-        const tavsiyeMesaji = args.join(' ');
-        if (!tavsiyeMesaji) {
-            return message.channel.send('Lütfen bir tavsiye mesajı girin.');
-        }
-        await this.handleTavsiyeCommand(message, tavsiyeMesaji);
-    },
+    // src/commands/tavsiye.js dosyasındaki execute metodu
+
+async execute(client, message, args) {
+    // Eğer args dizisi boşsa veya tanımsızsa,
+    // kullanıcıya bir tavsiye mesajı girmesi gerektiğini söyle ve fonksiyonu durdur.
+    if (!args || args.length === 0) {
+        return message.channel.send('Lütfen bir tavsiye mesajı girin.');
+    }
+    
+    // args dizisini güvenli bir şekilde birleştir
+    const tavsiyeMesaji = args.join(' ');
+    
+    // Ana fonksiyonu çağır
+    await this.handleTavsiyeCommand(message, tavsiyeMesaji);
+},
 
     // Slash komutları için metot
     async interact(interaction) {
