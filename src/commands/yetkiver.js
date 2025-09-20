@@ -183,6 +183,10 @@ module.exports = {
         }
 
         const target = message.mentions.members.first() || await message.guild.members.fetch(args[0]).catch(() => null);
+
+if (!target) {
+        return message.reply('Lütfen yetki vermek istediğiniz kişiyi etiketleyin veya ID\'sini girin.');
+    }
         await this.handleYetkiVerCommand(message, target);
     },
 
