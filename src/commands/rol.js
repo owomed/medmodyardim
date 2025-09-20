@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
 
 module.exports = {
     // Slash komutu verisi
@@ -19,7 +19,8 @@ module.exports = {
     async handleRolCommand(interactionOrMessage, role) {
         if (!role) {
             const replyMessage = 'Lütfen geçerli bir rol etiketleyin veya rol ID\'si girin.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            // 'isChatInputCommand' kontrolü artık güvenli
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 await interactionOrMessage.reply({ content: replyMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(replyMessage);
@@ -29,12 +30,12 @@ module.exports = {
 
         const roleName = role.name;
         const roleID = role.id;
-        const roleColor = role.hexColor; // Discord.js v14'te role.color yerine role.hexColor kullanılır
+        const roleColor = role.hexColor;
         const rolePosition = role.position;
         const roleCreatedAt = role.createdAt.toLocaleDateString('tr-TR');
         const rolePermissions = role.permissions.toArray().map(permission => {
             return `\`${permission}\``;
-        }).join(', ');
+        }).join(', ') || 'Hiçbir izin yok.';
         
         const membersWithRole = role.members
             .map(member => `<@${member.id}>`)
@@ -49,7 +50,7 @@ module.exports = {
                 { name: 'Renk', value: roleColor, inline: true },
                 { name: 'Pozisyon', value: rolePosition.toString(), inline: true },
                 { name: 'Oluşturulma Tarihi', value: roleCreatedAt, inline: true },
-                { name: 'İzinler', value: rolePermissions || 'Hiçbir izin yok.', inline: false },
+                { name: 'İzinler', value: rolePermissions, inline: false },
                 { name: 'Rol Sahipleri', value: membersWithRole, inline: false }
             )
             .setFooter({
@@ -59,7 +60,8 @@ module.exports = {
 
         // Yanıtı gönder
         try {
-            if (interactionOrMessage.isChatInputCommand()) {
+            // 'isChatInputCommand' kontrolü artık güvenli
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 await interactionOrMessage.reply({ embeds: [embed] });
             } else {
                 await interactionOrMessage.channel.send({ embeds: [embed] });
@@ -67,7 +69,8 @@ module.exports = {
         } catch (error) {
             console.error('Rol bilgileri gönderilirken bir hata oluştu:', error);
             const errorMessage = 'Rol bilgileri gönderilirken bir hata oluştu.';
-            if (interactionOrMessage.isChatInputCommand()) {
+            // 'isChatInputCommand' kontrolü artık güvenli
+            if (interactionOrMessage.isChatInputCommand?.()) {
                 await interactionOrMessage.reply({ content: errorMessage, ephemeral: true });
             } else {
                 await interactionOrMessage.channel.send(errorMessage);
@@ -77,7 +80,19 @@ module.exports = {
 
     // Prefix komutları için metot
     async execute(client, message, args) {
+        // DM kontrolü
+        if (message.channel.type === ChannelType.DM) {
+            return message.reply('Bu komut DM\'lerde kullanılamaz.');
+        }
+
+        // Rol etiketleme veya ID ile rolü bul
         const role = message.mentions.roles.first() || message.guild.roles.cache.get(args[0]);
+
+        // Rol bulunamazsa mesaj gönder
+        if (!role) {
+            return message.reply('Lütfen geçerli bir rol etiketleyin veya rol ID\'si girin.');
+        }
+
         await this.handleRolCommand(message, role);
     },
 
