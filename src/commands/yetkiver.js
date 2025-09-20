@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ChannelType } = require('discord.js');
 
 // Rol ID'leri ve isimleri tanımlandı
 const ROLES = {
@@ -59,7 +59,7 @@ module.exports = {
             option.setName('kullanici')
                 .setDescription('Yetki verilecek kullanıcı')
                 .setRequired(true)),
-    
+
     // Prefix komutu için isim ve açıklama
     name: 'yetkiver',
     description: 'Belirtilen kişiye yetki verir.',
@@ -90,8 +90,7 @@ module.exports = {
             .setTitle('Yetki Verme Menüsü')
             .setDescription(`${target} kişisine vermek istediğiniz yetkiyi seçin.`);
 
-        // İlk yanıtı gönder
-        const messageToCollect = await (interactionOrMessage.isChatInputCommand() 
+        const messageToCollect = await (interactionOrMessage.isChatInputCommand()
             ? interactionOrMessage.reply({ embeds: [initialEmbed], components: [row], ephemeral: true, fetchReply: true })
             : interactionOrMessage.channel.send({ embeds: [initialEmbed], components: [row] })
         );
@@ -148,7 +147,7 @@ module.exports = {
                     components: [],
                 });
             }
-            collector.stop(); // Bir seçim yapıldığında toplayıcıyı durdur
+            collector.stop();
         });
 
         collector.on('end', async (collected, reason) => {
@@ -157,7 +156,7 @@ module.exports = {
                     .setColor('#ffcc00')
                     .setTitle('⏱️ İşlem Zaman Aşımına Uğradı!')
                     .setDescription('Yetki seçme işlemi zaman aşımına uğradı. Lütfen tekrar deneyin.');
-                
+
                 if (messageToCollect.editable) {
                     await messageToCollect.edit({ embeds: [timeoutEmbed], components: [] }).catch(console.error);
                 }
@@ -167,18 +166,39 @@ module.exports = {
 
     // Prefix komutları için metot
     async execute(client, message, args) {
+        if (!message.guild) {
+            return;
+        }
+
+        // Komutu çalıştıran kişinin tam GuildMember objesini çek
+        const member = await message.guild.members.fetch(message.author.id).catch(console.error);
+        if (!member) {
+            return message.channel.send('Üye bilgileri alınırken bir hata oluştu.');
+        }
+
         // Yetki kontrolü
-        if (!message.member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
+        if (!member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
             return message.channel.send('Bu komutu kullanma yetkiniz yok.');
         }
-        const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+
+        const target = message.mentions.members.first() || await message.guild.members.fetch(args[0]).catch(() => null);
         await this.handleYetkiVerCommand(message, target);
     },
 
     // Slash komutları için metot
     async interact(interaction) {
+        if (!interaction.guild) {
+            return;
+        }
+
+        // Komutu çalıştıran kişinin tam GuildMember objesini çek
+        const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error);
+        if (!member) {
+            return interaction.reply({ content: 'Üye bilgileri alınırken bir hata oluştu.', ephemeral: true });
+        }
+        
         // Yetki kontrolü (sadece bu komut için)
-        if (!interaction.member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
+        if (!member.roles.cache.some(role => ALLOWED_ROLE_IDS.includes(role.id))) {
             return interaction.reply({ content: 'Bu komutu kullanma yetkiniz yok.', ephemeral: true });
         }
         
