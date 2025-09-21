@@ -9,6 +9,12 @@ let ticketCounter = 1; // Ticket sayacı (bot her başlatıldığında 1'e sıf�
 
 module.exports = async (client, interaction) => {
 
+    // ✅ HATA KONTROLÜ: interaction nesnesinin tanımlı olduğundan emin ol
+    if (!interaction) {
+        console.error('[HATA] interactionCreate eventi, tanımsız bir etkileşimle tetiklendi.');
+        return; // İşlemi durdur
+    }
+
     // --- ÖNCELİK 1: Sadece Slash Komut Etkileşimlerini İşle
     if (interaction.isCommand()) {
         const command = client.slashCommands.get(interaction.commandName);
