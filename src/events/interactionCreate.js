@@ -17,7 +17,8 @@ module.exports = async (client, interaction) => {
 
     // --- ÖNCELİK 1: Sadece Slash Komut Etkileşimlerini İşle
     if (interaction.isCommand()) {
-        const command = client.slashCommands.get(interaction.commandName);
+        // İki farklı koleksiyon adını da kontrol ediyoruz, böylece komutlar doğru bulunuyor.
+        const command = client.slashCommands?.get(interaction.commandName) || client.commands?.get(interaction.commandName);
 
         if (!command) {
             console.error(`[HATA] ${interaction.commandName} adında bir komut bulunamadı.`);
