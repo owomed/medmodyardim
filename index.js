@@ -1,3 +1,4 @@
+// index.js (Yeni ve daha temiz hali)
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
 const path = require('path');
@@ -6,16 +7,15 @@ const loader = require('./src/loader.js'); // Loader dosyasını çağır
 
 // Bot istemcisini oluştur
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers, // Üye verilerini anlık çekmek için açık kalmalı.
-    ],
-    // Kısmi (Partial) veriler, senkronizasyon sorunlarını çözmenin anahtarıdır.
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+    ],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User],
 });
 
 client.config = config;
@@ -23,24 +23,18 @@ client.config = config;
 // Loader'ı kullanarak tüm modülleri yükle
 loader(client);
 
-// Artık tepki mesajını önbelleğe alma veya senkronizasyonu durdurma kodu yok.
-// Bu görev, olay dosyalarındaki (reactionAdd/Remove) .fetch() çağrılarına devredilmiştir.
-client.on('ready', async () => {
-    console.log(`Bot başarılı bir şekilde giriş yaptı: ${client.user.tag}`);
-});
-
 // Web sunucusu kısmı
 const app = express();
 const port = process.env.PORT || 3000;
 app.get('/', (req, res) => {
-    res.send('Bot aktif ve çalışıyor!');
+    res.send('Bot aktif ve çalışıyor!');
 });
 app.listen(port, () => {
-    console.log(`Web sunucusu ${port} portunda çalışıyor.`);
+    console.log(`Web sunucusu ${port} portunda çalışıyor.`);
 });
 
 // Bota giriş yap
 client.login(client.config.token).catch(err => {
-    console.error("Bot başlatılırken kritik bir hata oluştu: ", err);
-    process.exit(1);
+    console.error("Bot başlatılırken bir hata oluştu: ", err);
+    process.exit(1);
 });
