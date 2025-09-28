@@ -1,80 +1,61 @@
-// src/events/messageReactionAdd.js - HATA TESPİT VERSİYONU
+// src/events/messageReactionAdd.js - ROL EKLEME (GÜVENLİ VE ANLIK)
 
 module.exports = async (client, reaction, user) => {
-    // 1. Botların kendi tepkilerini göz ardı et
+    // 1. Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
-        // --- BAŞLANGIÇ GÜVENLİK DUVARI (Yeni Hata Çözümü) ---
-        if (!reaction) return;
-        if (!reaction.message) return;
-        // ---------------------------------------------------
-
-        // HATA TESPİT LOGU: Bu satırı görüyor muyuz?
-        console.log(`[TEST LOG 1] Tepki alındı, işleniyor: ${user.tag}`);
-
+        // --- BAŞLANGIÇ GÜVENLİK KONTROLLERİ ---
+        // Gelen nesnelerin varlığını garanti altına alır.
+        if (!reaction || !reaction.message) return;
+        
         // 2. KISMI VERİ ÇÖZÜMLEME
+        // Eğer tepki veya kullanıcı tam veri değilse, API'dan çek.
         if (user.partial) await user.fetch();
         if (reaction.partial) await reaction.fetch();
         
         // 3. SENKRONİZASYON BYPASS
+        // Eğer mesaj hala kısmi ise, bu büyük olasılıkla botun açılışındaki eski tepkidir. Atla.
         if (reaction.message.partial) {
+            // Mesajı fetch et ki ID'sine ulaşabilelim. Hata durumunda yoksay.
             await reaction.message.fetch().catch(() => {});
-            // Eğer message.id eşleşiyorsa (yani rol mesajıysa), eski tepki olabilir. ATLA.
-            const MESSAGE_ID = client.config.MESSAGE_ID;
-            // *Bu satırı da kaldırıp sadece ID kontrolü yapalım, belki sorun buradadır.*
-            // if (reaction.message.id === MESSAGE_ID) return; 
+            
+            // Eğer rol verme mesajımızın ID'si ile eşleşiyorsa, eski tepkiyi işleme.
+            if (reaction.message.id === client.config.MESSAGE_ID) return;
         }
 
-        // HATA TESPİT LOGU: Bu satırı görüyor muyuz?
-        console.log(`[TEST LOG 2] Kısmi veriler çözüldü.`);
-        
-        // 4. KRİTİK FİLTRE: Mesaj ID Eşleşmesi
+        // 4. TEMEL FİLTRELER
         const MESSAGE_ID = client.config.MESSAGE_ID;
-        if (reaction.message.id !== MESSAGE_ID) {
-            console.log(`[FILTRE KESİNTİSİ] Mesaj ID eşleşmiyor: ${reaction.message.id}`);
-            return;
-        }
-
-        // 5. EMOJİ KONTROLÜ
-        if (!reaction.emoji || !reaction.emoji.name) return;
+        if (reaction.message.id !== MESSAGE_ID) return; // Yanlış mesajsa dur.
         
-        const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
-        const roleId = ROLE_EMOJI_MAP[reaction.emoji.name];
-        if (!roleId) {
-            console.log(`[FILTRE KESİNTİSİ] Emoji için rol ID'si bulunamadı: ${reaction.emoji.name}`);
-            return; 
-        }
+        if (!reaction.emoji || !reaction.emoji.name) return;
+        const roleId = client.config.ROLE_EMOJI_MAP[reaction.emoji.name];
+        if (!roleId) return; // Eşleşen rol yoksa dur.
 
-        // HATA TESPİT LOGU: Bu satırı görüyor muyuz?
-        console.log(`[AKTİF TEPKİ] Rol verme işlemine başlanıyor: ${reaction.emoji.name} / ${user.tag}`);
+        // Log: İşleme başladığını gör.
+        console.log(`[AKTİF ADD] Rol işlemi başladı: ${reaction.emoji.name} -> ${user.tag}`);
 
-        // --- ROL VERME İŞLEMİ (Eğer buraya ulaştıysa, izin hatası olabilir) ---
-
-        const guild = reaction.message.guild;
-        const member = await guild.members.fetch(user.id).catch(() => {
-             console.error(`[MEMBER HATA] Üye fetch edilemedi (Sunucudan ayrılmış olabilir): ${user.id}`);
-             return null;
-        }); 
+        // 5. ÜYEYİ ÇEKME VE ROL EKLEME
+        const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
 
         if (member) {
-            const role = guild.roles.cache.get(roleId);
+            const role = reaction.message.guild.roles.cache.get(roleId);
             if (role) {
-                // ROL VERME ATILIRKEN HATA YAKALAYICI EKLEYELİM
+                // Rol verme işlemini hata yakalayıcı ile sarar.
                 await member.roles.add(role).then(() => {
-                    console.log(`[ROL EKLEME BAŞARILI] Rol: ${role.name} - Kullanıcı: ${user.tag}`);
+                    console.log(`[BAŞARILI] Rol eklendi: ${role.name} (${user.tag})`);
                 }).catch(err => {
-                    // İZİN HATASI: Bot rol hiyerarşisinde düşüktür.
-                    console.error(`[İZİN HATASI] Rol verme başarısız: ${role.name}. Hata: ${err.message}`);
+                    console.error(`[ROL HATA] Rol eklenemedi (İzinler/Hiyerarşi): ${user.tag}`, err.message);
                 });
             } else {
                 console.error(`[CONFIG HATA] Rol ID'si (${roleId}) sunucuda bulunamadı.`);
             }
         } else {
+            // Sessizce dön (Sunucudan ayrılmış eski kullanıcılar)
             return; 
         }
     } catch (error) {
-        const errorUserTag = user && user.tag ? user.tag : 'Bilinmeyen Kullanıcı';
-        console.error(`Tepki (Ekleme) işlenirken genel hata oluştu: (${errorUserTag})`, error);
+        const userTag = user?.tag || 'Bilinmeyen Kullanıcı';
+        console.error(`Tepki (Ekleme) işlenirken genel hata oluştu: (${userTag})`, error);
     }
 };
