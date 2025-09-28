@@ -1,50 +1,54 @@
 // src/events/messageReactionAdd.js
 
 module.exports = async (client, reaction, user) => {
-    // Botların kendi tepkilerini göz ardı et
+    // Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
-        // Eğer tepki kısmi (partial) ise, tam objesini getirmeye çalış
+        // --- KISMİ VERİ KONTROLLERİ ---
+        // 1. Tepkinin kendisi kısmi ise tam veriye çek
         if (reaction.partial) {
             await reaction.fetch();
         }
 
-        // 🚨 YENİ VE KRİTİK KONTROL: message nesnesi var mı?
-        if (!reaction.message) return; // Mesaj nesnesi yoksa işlemi sonlandır!
+        // 2. Mesaj nesnesi var mı? Yoksa işlemi sonlandır (en sık alınan hatayı engeller)
+        if (!reaction.message) return;
 
-        // Mesajın da kısmi olup olmadığını kontrol edin ve tamamlayın
+        // 3. Mesaj kısmi ise tam veriye çek
         if (reaction.message.partial) {
             await reaction.message.fetch();
         }
+        // -----------------------------
 
         const { message, emoji } = reaction;
-
-        // Belirli mesajı kontrol et.
+        
+        // 4. Doğru mesajda tepki verilip verilmediğini kontrol et
         const MESSAGE_ID = client.config.MESSAGE_ID;
         if (message.id !== MESSAGE_ID) return;
 
-        // ... kodunuzun geri kalanı (rol verme mantığı)
+        // 5. Emojinin eşleştiği bir rol var mı?
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
         const roleId = ROLE_EMOJI_MAP[emoji.name];
-
         if (!roleId) return;
 
+        // 6. Üyeyi getir ve rol atama işlemini yap
         const guild = message.guild;
         const member = await guild.members.fetch(user.id);
-
+        
+        // Üyenin sunucuda olduğundan emin ol
         if (member) {
             const role = guild.roles.cache.get(roleId);
             if (role) {
+                // Rolü ekle
                 await member.roles.add(role);
-                console.log(`Rol eklendi: ${role.name} (${roleId}) - ${user.tag}`);
+                console.log(`[ROL EKLEME BAŞARILI] Rol: ${role.name} - Kullanıcı: ${user.tag}`);
             } else {
-                console.error(`Rol bulunamadı: ${roleId}`);
+                console.error(`[HATA] Rol bulunamadı: ${roleId} (Config'de tanımlı ama sunucuda yok)`);
             }
         } else {
-            console.error('Üye bulunamadı:', user.id);
+            console.error(`[HATA] Üye bulunamadı: ${user.id}`);
         }
     } catch (error) {
-        console.error('Tepki işlenirken bir hata oluştu:', error);
+        console.error('Tepki (Ekleme) işlenirken bir hata oluştu:', error);
     }
 };
