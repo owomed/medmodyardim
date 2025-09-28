@@ -1,3 +1,5 @@
+// src/events/messageReactionAdd.js
+
 module.exports = async (client, reaction, user) => {
     // Botların kendi tepkilerini göz ardı et
     if (user.bot) return;
@@ -8,13 +10,20 @@ module.exports = async (client, reaction, user) => {
             await reaction.fetch();
         }
 
+        // 🚨 ÖNEMLİ EKLEME: Mesajı da tam objesine getir!
+        if (reaction.message.partial) {
+            await reaction.message.fetch();
+        }
+
         const { message, emoji } = reaction;
+        
+        // Bu noktada "message" nesnesi GUARANTİD tam bir mesaj objesidir.
 
         // Belirli mesajı kontrol et.
-        // Mesajın önbellekte olmaması durumunu da kontrol et.
         const MESSAGE_ID = client.config.MESSAGE_ID;
-        if (!message || message.id !== MESSAGE_ID) return;
+        if (message.id !== MESSAGE_ID) return; // message'ın artık kesinlikle bir "id"si var.
 
+        // ... kodunuzun geri kalanı
         // Rol ve emoji eşleşmesini config'ten al
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
         const roleId = ROLE_EMOJI_MAP[emoji.name];
