@@ -5,28 +5,33 @@ module.exports = async (client, reaction, user) => {
     if (user.bot) return;
 
     try {
-        // --- KRİTİK KULLANICI KONTROLÜ ---
+        // --- KRİTİK KONTROLLER ---
         // Kullanıcı nesnesinin kısmi olma ihtimaline karşı fetch yap
         if (user.partial) {
             await user.fetch();
         }
-        // ------------------------------------
-        
-        console.log(`[DEBUG] Remove Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`);
 
-        // --- KISMİ VERİ KONTROLLERİ ---
+        // 1. Tepkinin kendisi kısmi ise tam veriye çek
         if (reaction.partial) {
             await reaction.fetch();
         }
+        
+        // 🚨 YENİ KRİTİK KONTROL: Emoji nesnesi var mı?
+        // Bu kontrol, önceki hatayı çözmelidir.
+        if (!reaction.emoji || !reaction.emoji.name) return;
+        
+        console.log(`[DEBUG] Remove Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`);
 
+        // 2. Mesaj nesnesi var mı? Yoksa işlemi sonlandır
         if (!reaction.message) return;
 
+        // 3. Mesaj kısmi ise tam veriye çek
         if (reaction.message.partial) {
             await reaction.message.fetch();
         }
         // -----------------------------
 
-        const { message, emoji } = reaction;
+        const { message, emoji } = reaction; // Emoji burada artık garantili olarak var
 
         // 4. Doğru mesajda tepki kaldırılıp kaldırılmadığını kontrol et
         const MESSAGE_ID = client.config.MESSAGE_ID;
@@ -55,7 +60,7 @@ module.exports = async (client, reaction, user) => {
             console.error(`[HATA] Üye bulunamadı: ${user.id}`);
         }
     } catch (error) {
-        // Rol kaldırma işlemlerinde izin hatası alırsanız, bu catch bloğu yakalar.
+        // Hatanın oluştuğu kullanıcıyı/emoji'yi yakalamaya çalış
         const errorUserTag = user && user.tag ? user.tag : 'Bilinmeyen Kullanıcı';
         console.error(`Tepki (Kaldırma) işlenirken bir hata oluştu: (${errorUserTag})`, error);
     }
