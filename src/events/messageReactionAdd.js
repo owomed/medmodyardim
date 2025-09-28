@@ -10,16 +10,18 @@ module.exports = async (client, reaction, user) => {
         if (user.partial) {
             await user.fetch();
         }
-        // Artık user.tag/user.name güvenle kullanılabilir.
-        // ------------------------------------
+        // messageReactionAdd.js içine de ekleyin
+// ...
+// 1. Tepkinin kendisi kısmi ise tam veriye çek
+if (reaction.partial) {
+    await reaction.fetch();
+}
 
-        console.log(`[DEBUG] Add Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); 
-        
-        // --- KISMİ VERİ KONTROLLERİ ---
-        // 1. Tepkinin kendisi kısmi ise tam veriye çek
-        if (reaction.partial) {
-            await reaction.fetch();
-        }
+// 🚨 KRİTİK KONTROL
+if (!reaction.emoji || !reaction.emoji.name) return; 
+
+console.log(`[DEBUG] Add Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`);
+// ...
 
         // 2. Mesaj nesnesi var mı? Yoksa işlemi sonlandır
         if (!reaction.message) return;
