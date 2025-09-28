@@ -7,7 +7,7 @@ const loader = require('./src/loader.js'); // Loader dosyasını çağır
 
 // Rol verme mesajının bulunduğu KANAL ID'sini buraya ekleyin!
 // client.config.js dosyanızda sadece MESSAGE_ID olduğu için, buraya CHANNEL_ID'yi manuel olarak eklemeniz gereklidir.
-const CHANNEL_ID = 'ROL_VERME_MESAJININ_BULUNDUGU_KANAL_IDSI'; // BURAYI KENDİ KANAL ID'nizle DEĞİŞTİRİN
+const CHANNEL_ID = '1235112746329178165'; // BURAYI KENDİ KANAL ID'nizle DEĞİŞTİRİN
 
 // Bot istemcisini oluştur
 const client = new Client({
