@@ -5,7 +5,15 @@ module.exports = async (client, reaction, user) => {
     if (user.bot) return;
 
     try {
-        console.log(`[DEBUG] Remove Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); // YENİ LOG
+        // --- KRİTİK KULLANICI KONTROLÜ ---
+        // Kullanıcı nesnesinin kısmi olma ihtimaline karşı fetch yap
+        if (user.partial) {
+            await user.fetch();
+        }
+        // ------------------------------------
+        
+        console.log(`[DEBUG] Remove Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`);
+
         // --- KISMİ VERİ KONTROLLERİ ---
         if (reaction.partial) {
             await reaction.fetch();
@@ -48,6 +56,7 @@ module.exports = async (client, reaction, user) => {
         }
     } catch (error) {
         // Rol kaldırma işlemlerinde izin hatası alırsanız, bu catch bloğu yakalar.
-        console.error('Tepki (Kaldırma) işlenirken bir hata oluştu:', error);
+        const errorUserTag = user && user.tag ? user.tag : 'Bilinmeyen Kullanıcı';
+        console.error(`Tepki (Kaldırma) işlenirken bir hata oluştu: (${errorUserTag})`, error);
     }
 };
