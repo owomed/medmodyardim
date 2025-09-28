@@ -1,49 +1,49 @@
-// src/events/messageReactionRemove.js - V14 Uyumlu ve Stabil
+// src/events/messageReactionRemove.js - RADİKAL ÇÖZÜM
 
 module.exports = async (client, reaction, user) => {
     if (user.bot) return;
 
     try {
-        // --- V14 KRİTİK KONTROLLER ---
+        // --- GÜVENLİK KONTROLLERİ ---
         if (!reaction || !reaction.message) return;
         if (user.partial) await user.fetch();
         if (reaction.partial) await reaction.fetch();
-
-        // Senkronizasyon (Eski Tepki) Atlatma
-        if (reaction.message.partial) {
-            await reaction.message.fetch().catch(() => {});
-            if (reaction.message.id === client.config.MESSAGE_ID) return;
-        }
-        // -----------------------------
+        if (reaction.message.partial) await reaction.message.fetch().catch(() => {});
+        // --------------------------
         
-        const { message, emoji } = reaction;
         const MESSAGE_ID = client.config.MESSAGE_ID;
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
 
-        if (message.id !== MESSAGE_ID) return;
+        // TEST LOG 1: Geri Bildirim
+        console.log(`[TEST REMOVE 1] Tepki alındı, Mesaj ID kontrol ediliyor...`);
 
-        const roleId = ROLE_EMOJI_MAP[emoji.name];
+        if (reaction.message.id !== MESSAGE_ID) {
+             console.log(`[ID FILTRESI REMOVE] Yanlış mesaj ID: ${reaction.message.id}`);
+             return;
+        }
+
+        // TEST LOG 2: Geri Bildirim
+        console.log(`[TEST REMOVE 2] Mesaj ID eşleşti. Emoji: ${reaction.emoji.name}`);
+
+        const roleId = ROLE_EMOJI_MAP[reaction.emoji.name];
         if (!roleId) return;
 
-        // Üyeyi GÜNCEL veriden çek
-        const member = await message.guild.members.fetch(user.id).catch(() => null);
-        
+        const member = await reaction.message.guild.members.fetch(user.id).catch(() => null);
+
         if (member) {
-            const role = message.guild.roles.cache.get(roleId);
+            const role = reaction.message.guild.roles.cache.get(roleId);
             if (role) {
                 await member.roles.remove(roleId).then(() => {
-                    console.log(`[ROL KALDIRMA BAŞARILI] Rol kaldırıldı: ${role.name} (${user.tag})`);
+                    console.log(`[BAŞARILI] Rol kaldırıldı: ${role.name} (${user.tag})`);
                 }).catch(err => {
-                    console.error(`[ROL HATA] Rol kaldırılamadı (İzinler/Hiyerarşi): ${user.tag}`, err.message);
+                    console.error(`[ROL HATA] Rol kaldırılamadı (İzinler/Hiyerarşi): ${user.tag} - Hata: ${err.message}`);
                 });
             } else {
                 console.error(`[CONFIG HATA] Rol bulunamadı: ${roleId}`);
             }
-        } else {
-            return;
         }
     } catch (error) {
         const userTag = user?.tag || 'Bilinmeyen Kullanıcı';
-        console.error(`Tepki (Kaldırma) işlenirken kritik bir hata oluştu: (${userTag})`, error);
+        console.error(`Tepki (Kaldırma) işlenirken genel hata oluştu: (${userTag})`, error);
     }
 };
