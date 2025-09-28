@@ -1,51 +1,52 @@
 // src/events/messageReactionRemove.js
 
 module.exports = async (client, reaction, user) => {
-    // Botların kendi tepkilerini göz ardı et
+    // Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
-        // Eğer tepki kısmi (partial) ise, tam objesini getirmeye çalış
+        // --- KISMİ VERİ KONTROLLERİ ---
         if (reaction.partial) {
             await reaction.fetch();
         }
 
-        // 🚨 YENİ VE KRİTİK KONTROL: message nesnesi var mı?
-        if (!reaction.message) return; // Mesaj nesnesi yoksa işlemi sonlandır!
+        if (!reaction.message) return;
 
-        // Mesajın da kısmi olup olmadığını kontrol edin ve tamamlayın
         if (reaction.message.partial) {
             await reaction.message.fetch();
         }
+        // -----------------------------
 
         const { message, emoji } = reaction;
 
-        // Belirli mesajı kontrol et.
+        // 4. Doğru mesajda tepki kaldırılıp kaldırılmadığını kontrol et
         const MESSAGE_ID = client.config.MESSAGE_ID;
         if (message.id !== MESSAGE_ID) return;
 
-        // ... kodunuzun geri kalanı (rol kaldırma mantığı)
+        // 5. Emojinin eşleştiği bir rol var mı?
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
         const roleId = ROLE_EMOJI_MAP[emoji.name];
-
         if (!roleId) return;
 
+        // 6. Üyeyi getir ve rol kaldırma işlemini yap
         const guild = message.guild;
         const member = await guild.members.fetch(user.id);
 
+        // Üyenin sunucuda olduğundan emin ol
         if (member) {
             const role = guild.roles.cache.get(roleId);
             if (role) {
+                // Rolü kaldır
                 await member.roles.remove(role);
-console.log(`[BAŞARILI GÖRÜNÜYOR] Rol kaldırma komutu gönderildi.`); // <-- YENİ LOG EKLE
-console.log(`Rol kaldırıldı: ${role.name} (${roleId}) - ${user.tag}`);
+                console.log(`[ROL KALDIRMA BAŞARILI] Rol: ${role.name} - Kullanıcı: ${user.tag}`);
             } else {
-                console.error(`Rol bulunamadı: ${roleId}`);
+                console.error(`[HATA] Rol bulunamadı: ${roleId} (Config'de tanımlı ama sunucuda yok)`);
             }
         } else {
-            console.error('Üye bulunamadı:', user.id);
+            console.error(`[HATA] Üye bulunamadı: ${user.id}`);
         }
     } catch (error) {
-        console.error('Tepki işlenirken bir hata oluştu:', error);
+        // Rol kaldırma işlemlerinde izin hatası alırsanız, bu catch bloğu yakalar.
+        console.error('Tepki (Kaldırma) işlenirken bir hata oluştu:', error);
     }
 };
