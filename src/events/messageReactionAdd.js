@@ -1,50 +1,44 @@
-// src/events/messageReactionAdd.js
+// src/events/messageReactionAdd.js - ROL EKLEME KESİN ÇÖZÜM
+
 module.exports = async (client, reaction, user) => {
-    // 1. Botların kendi tepkilerini göz ardı et
+    // Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
-        // --- KRİTİK KONTROLLER (Kısmi Veri Yönetimi) ---
-
-        // 2. KULLANICI KONTROLÜ: Kullanıcının kendisi kısmi ise tam veriye çek
-        if (user.partial) {
-            await user.fetch();
-        }
-
-        // 3. TEPKİ KONTROLÜ: Tepkinin kendisi kısmi ise tam veriye çek
-        if (reaction.partial) {
-            await reaction.fetch();
-        }
-
-        // 4. EMOJİ KONTROLÜ: Emoji nesnesi tanımsız (undefined) ise işlemi durdur
-        if (!reaction.emoji || !reaction.emoji.name) return;
+        // --- KRİTİK KISIM 1: VERİ BÜTÜNLÜĞÜNÜ SAĞLAMA (Kısmi Veri Hatalarını Engelle) ---
         
+        // Kullanıcıyı ve Tepkiyi tam veriye çek
+        if (user.partial) await user.fetch();
+        if (reaction.partial) await reaction.fetch();
+        
+        // Mesaj, emoji ve rol eşleşme kontrolü için hemen veriyi çekin.
+        if (!reaction.emoji || !reaction.emoji.name) return;
+        if (!reaction.message) return;
+        if (reaction.message.partial) await reaction.message.fetch();
+
+        // Debug logunu buraya koyalım ki, fetch işlemi tamamlandıktan sonra çalışsın.
         console.log(`[DEBUG] Add Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`);
 
-        // 5. MESAJ KONTROLÜ: Mesaj nesnesi var mı? Yoksa işlemi sonlandır
-        if (!reaction.message) return;
-
-        // 6. MESAJ KISMI KONTROLÜ: Mesaj kısmi ise tam veriye çek
-        if (reaction.message.partial) {
-            await reaction.message.fetch();
-        }
-        // ----------------------------------------------
-
-        const { message, emoji } = reaction;
-
-        // 7. Doğru mesajda tepki verilip verilmediğini kontrol et
-        const MESSAGE_ID = client.config.MESSAGE_ID;
-        if (message.id !== MESSAGE_ID) return;
-
-        // 8. Emojinin eşleştiği bir rol var mı?
-        const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
-        const roleId = ROLE_EMOJI_MAP[emoji.name];
-        if (!roleId) return;
-
-        // 9. Üyeyi getir ve rol atama işlemini yap
-        const guild = message.guild;
-        const member = await guild.members.fetch(user.id);
+        // --- KRİTİK KISIM 2: ROL EŞLEŞMESİ KONTROLÜ ---
         
+        const MESSAGE_ID = client.config.MESSAGE_ID;
+        if (reaction.message.id !== MESSAGE_ID) return;
+
+        const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
+        const roleId = ROLE_EMOJI_MAP[reaction.emoji.name];
+        if (!roleId) return; // Eşleşen rol ID'si yoksa dur.
+
+        // --- KRİTİK KISIM 3: ÜYEYİ BULMA VE ROL VERME ---
+
+        const guild = reaction.message.guild;
+        
+        // Üyeyi sunucuda bul (Doğrudan API'dan çekiyor, önbellek bypass ediliyor)
+        const member = await guild.members.fetch(user.id).catch(err => {
+            // Sadece bu logu tutalım. Eğer hata verirse yine intent sorunu var demektir.
+            console.error(`[FATAL HATA] Üye fetch işlemi başarısız: ${user.id}`, err.message);
+            return null;
+        });
+
         if (member) {
             const role = guild.roles.cache.get(roleId);
             if (role) {
@@ -52,14 +46,14 @@ module.exports = async (client, reaction, user) => {
                 await member.roles.add(role);
                 console.log(`[ROL EKLEME BAŞARILI] Rol: ${role.name} - Kullanıcı: ${user.tag}`);
             } else {
-                console.error(`[HATA] Rol bulunamadı: ${roleId} (Config'de tanımlı ama sunucuda yok)`);
+                console.error(`[CONFIG HATA] Rol ID'si (${roleId}) sunucuda bulunamadı.`);
             }
         } else {
-            console.error(`[HATA] Üye bulunamadı: ${user.id}`);
+            console.error(`[SYNC HATA] Rol verilecek üye sunucuda bulunamadı (Intent kapalı/Limit Aşımı): ${user.id}`);
         }
     } catch (error) {
         // Hata durumunda DEBUG amaçlı daha fazla bilgi logla
         const errorUserTag = user && user.tag ? user.tag : 'Bilinmeyen Kullanıcı';
-        console.error(`Tepki (Ekleme) işlenirken kritik bir hata oluştu: (${errorUserTag})`, error);
+        console.error(`Tepki (Ekleme) işlenirken genel hata oluştu: (${errorUserTag})`, error);
     }
 };
