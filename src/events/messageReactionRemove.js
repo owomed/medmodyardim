@@ -37,7 +37,8 @@ module.exports = async (client, reaction, user) => {
             const role = guild.roles.cache.get(roleId);
             if (role) {
                 await member.roles.remove(role);
-                console.log(`Rol kaldırıldı: ${role.name} (${roleId}) - ${user.tag}`);
+console.log(`[BAŞARILI GÖRÜNÜYOR] Rol kaldırma komutu gönderildi.`); // <-- YENİ LOG EKLE
+console.log(`Rol kaldırıldı: ${role.name} (${roleId}) - ${user.tag}`);
             } else {
                 console.error(`Rol bulunamadı: ${roleId}`);
             }
