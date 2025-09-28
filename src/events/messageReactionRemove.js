@@ -5,7 +5,7 @@ module.exports = async (client, reaction, user) => {
     if (user.bot) return;
 
     try {
-        console.log(`[DEBUG] Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); // YENİ LOG
+        console.log(`[DEBUG] Remove Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); // YENİ LOG
         // --- KISMİ VERİ KONTROLLERİ ---
         if (reaction.partial) {
             await reaction.fetch();
