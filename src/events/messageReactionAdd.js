@@ -10,39 +10,36 @@ module.exports = async (client, reaction, user) => {
             await reaction.fetch();
         }
 
-        // 🚨 ÖNEMLİ EKLEME: Mesajı da tam objesine getir!
+        // 🚨 YENİ VE KRİTİK KONTROL: message nesnesi var mı?
+        if (!reaction.message) return; // Mesaj nesnesi yoksa işlemi sonlandır!
+
+        // Mesajın da kısmi olup olmadığını kontrol edin ve tamamlayın
         if (reaction.message.partial) {
             await reaction.message.fetch();
         }
 
         const { message, emoji } = reaction;
-        
-        // Bu noktada "message" nesnesi GUARANTİD tam bir mesaj objesidir.
 
         // Belirli mesajı kontrol et.
         const MESSAGE_ID = client.config.MESSAGE_ID;
-        if (message.id !== MESSAGE_ID) return; // message'ın artık kesinlikle bir "id"si var.
+        if (message.id !== MESSAGE_ID) return;
 
-        // ... kodunuzun geri kalanı
-        // Rol ve emoji eşleşmesini config'ten al
+        // ... kodunuzun geri kalanı (rol verme mantığı)
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
         const roleId = ROLE_EMOJI_MAP[emoji.name];
-        
-        // Eşleşen bir rol yoksa dur
+
         if (!roleId) return;
 
-        // Üyeyi getir. Eğer kısmi (partial) ise tam objesini getir.
         const guild = message.guild;
         const member = await guild.members.fetch(user.id);
 
         if (member) {
             const role = guild.roles.cache.get(roleId);
             if (role) {
-                // Üyeye rolü ekle
                 await member.roles.add(role);
                 console.log(`Rol eklendi: ${role.name} (${roleId}) - ${user.tag}`);
             } else {
-                console.error(`Rol bulunamadı: ${roleId} (Sunucuda mevcut değil)`);
+                console.error(`Rol bulunamadı: ${roleId}`);
             }
         } else {
             console.error('Üye bulunamadı:', user.id);
