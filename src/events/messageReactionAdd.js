@@ -1,10 +1,10 @@
 // src/events/messageReactionAdd.js
-
 module.exports = async (client, reaction, user) => {
     // Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
+        console.log(`[DEBUG] Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); // YENİ LOG
         // --- KISMİ VERİ KONTROLLERİ ---
         // 1. Tepkinin kendisi kısmi ise tam veriye çek
         if (reaction.partial) {
