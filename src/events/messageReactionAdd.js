@@ -1,17 +1,27 @@
 // src/events/messageReactionAdd.js
+
 module.exports = async (client, reaction, user) => {
     // Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
-        console.log(`[DEBUG] Add Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); // YENİ LOG
+        // --- KRİTİK KULLANICI KONTROLÜ ---
+        // Kullanıcı nesnesinin kısmi olma ihtimaline karşı fetch yap
+        if (user.partial) {
+            await user.fetch();
+        }
+        // Artık user.tag/user.name güvenle kullanılabilir.
+        // ------------------------------------
+
+        console.log(`[DEBUG] Add Tepki olayı başladı: ${reaction.emoji.name} / ${user.tag}`); 
+        
         // --- KISMİ VERİ KONTROLLERİ ---
         // 1. Tepkinin kendisi kısmi ise tam veriye çek
         if (reaction.partial) {
             await reaction.fetch();
         }
 
-        // 2. Mesaj nesnesi var mı? Yoksa işlemi sonlandır (en sık alınan hatayı engeller)
+        // 2. Mesaj nesnesi var mı? Yoksa işlemi sonlandır
         if (!reaction.message) return;
 
         // 3. Mesaj kısmi ise tam veriye çek
@@ -49,6 +59,8 @@ module.exports = async (client, reaction, user) => {
             console.error(`[HATA] Üye bulunamadı: ${user.id}`);
         }
     } catch (error) {
-        console.error('Tepki (Ekleme) işlenirken bir hata oluştu:', error);
+        // Hatanın oluştuğu kullanıcıyı/emoji'yi yakalamaya çalış
+        const errorUserTag = user && user.tag ? user.tag : 'Bilinmeyen Kullanıcı';
+        console.error(`Tepki (Ekleme) işlenirken bir hata oluştu: (${errorUserTag})`, error);
     }
 };
