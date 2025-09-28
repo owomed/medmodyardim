@@ -8,12 +8,18 @@ module.exports = async (client, reaction, user) => {
             await reaction.fetch();
         }
 
+        // 🚨 ÖNEMLİ EKLEME: Mesajı da tam objesine getir!
+        // Aksi takdirde message.id okumaya çalışırken TypeError alabilirsiniz.
+        if (reaction.message.partial) {
+            await reaction.message.fetch();
+        }
+
         const { message, emoji } = reaction;
 
         // Belirli mesajı kontrol et.
-        // Mesajın önbellekte olmaması durumunu da kontrol et.
         const MESSAGE_ID = client.config.MESSAGE_ID;
-        if (!message || message.id !== MESSAGE_ID) return;
+        // Artık 'message' nesnesi garanti olarak tam veriye sahip olduğu için güvenle 'message.id' kullanabiliriz.
+        if (message.id !== MESSAGE_ID) return;
 
         // Rol ve emoji eşleşmesini config'ten al
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
@@ -40,5 +46,7 @@ module.exports = async (client, reaction, user) => {
         }
     } catch (error) {
         console.error('Tepki işlenirken bir hata oluştu:', error);
+        // Hata durumunda DEBUG için hangi mesajda ve kimden geldiğini loglamak faydalı olabilir
+        // console.error(`Hata Detayı: Mesaj ID: ${reaction.message.id || 'Bilinmiyor'}, Kullanıcı ID: ${user.id}`);
     }
 };
