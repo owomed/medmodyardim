@@ -1,43 +1,45 @@
-// src/events/messageReactionAdd.js - SADECE YENİ TEPKİLERE ODAKLANMA
+// src/events/messageReactionAdd.js - Hata Düzeltmeleri Uygulanmış, Kararlı Versiyon
 
 module.exports = async (client, reaction, user) => {
-    // 1. Botların kendi tepkilerini göz ardı et
+    // Botun kendi tepkilerini göz ardı et
     if (user.bot) return;
 
     try {
-        // --- KRİTİK KONTROLLER (Kısmi Veri Yönetimi) ---
-        
-        // Kullanıcıyı ve Tepkiyi tam veriye çek
+        // 1. KULLANICI KONTROLÜ (Tepkiyi veren kişi)
         if (user.partial) await user.fetch();
+        
+        // 2. TEPKİ KONTROLÜ
         if (reaction.partial) await reaction.fetch();
         
-        // Mesaj Kısmi İse ve Sunucuda Değilse (Yani Senkronizasyon Sırasında Geliyorsa) İŞLEMİ DURDUR.
-        // Bu, botun açılırkenki eski tepkileri işleme isteğini engeller.
-        if (reaction.message.partial && !reaction.message.inGuild()) return; 
-        
-        // Diğer kontroller (Hata olmaması için zorunlu)
+        // 3. EMOJİ KONTROLÜ (Emoji nesnesinin varlığını garanti altına alır)
         if (!reaction.emoji || !reaction.emoji.name) return;
+        
+        // 4. MESAJ KONTROLÜ (Message nesnesinin bütünlüğünü garanti altına alır)
         if (!reaction.message) return;
         if (reaction.message.partial) await reaction.message.fetch();
-        // -----------------------------------------------------------
         
+        // --- BU NOKTADAN SONRA TÜM NESNELER GÜVENLİDİR ---
+
         const { message, emoji } = reaction;
 
-        // Debug logunu burada tutalım
+        // Debug logu artık güvenli bir şekilde çalışır
         console.log(`[DEBUG] Add Tepki olayı başladı: ${emoji.name} / ${user.tag}`);
 
-        // 2. Mesaj ve Rol Eşleşme Kontrolleri
+        // 5. Mesaj ID Kontrolü
         const MESSAGE_ID = client.config.MESSAGE_ID;
         if (message.id !== MESSAGE_ID) return;
 
+        // 6. Rol Eşleşme Kontrolü
         const ROLE_EMOJI_MAP = client.config.ROLE_EMOJI_MAP;
         const roleId = ROLE_EMOJI_MAP[emoji.name];
         if (!roleId) return;
 
-        // 3. Üyeyi Bulma ve Rol Verme
+        // 7. ÜYEYİ ÇEKME (Düzeltildi: user.id kullanılıyor)
         const guild = message.guild;
-        const member = await guild.members.fetch(user.id).catch(() => {
-            // Üye bulunamadıysa (sunucudan ayrılmışsa), hata logu vermeden null döndür.
+        
+        // Rolü vereceğimiz kişiyi (Tepkiyi Veren Kişiyi) API'dan çağırıyoruz
+        const member = await guild.members.fetch(user.id).catch(() => { 
+            // Üye bulunamazsa (sunucudan ayrılmışsa) sessizce döndür
             return null; 
         });
 
@@ -50,11 +52,11 @@ module.exports = async (client, reaction, user) => {
                 console.error(`[HATA] Rol ID'si (${roleId}) sunucuda bulunamadı.`);
             }
         } else {
-            // Üye bulunamadığı için sessizce dön (eski kullanıcı tepkileri)
+            // Sessizce ayrıl (Bot açılışındaki eski tepkiler veya ayrılanlar)
             return;
         }
     } catch (error) {
         const errorUserTag = user && user.tag ? user.tag : 'Bilinmeyen Kullanıcı';
-        console.error(`Tepki (Ekleme) işlenirken genel hata oluştu: (${errorUserTag})`, error);
+        console.error(`Tepki (Ekleme) işlenirken kritik bir hata oluştu: (${errorUserTag})`, error);
     }
 };
