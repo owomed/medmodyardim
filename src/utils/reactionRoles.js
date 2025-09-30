@@ -1,6 +1,11 @@
-// utils/reactionRoles.js VEYA events/reactionRoles.js (Aşağıdaki Loader Güncellemesine göre yerini seçin)
+// src/utils/reactionRoles.js
 
-const { ROLE_EMOJI_MAP, REACTION_MESSAGE_ID } = require('../../config');
+// 1. Düzeltme: Tüm config verilerini bir kez, doğru yoldan yükle. (../../config)
+const { 
+    ROLE_EMOJI_MAP, 
+    REACTION_MESSAGE_ID, 
+    REACTION_CHANNEL_ID // REACTION_CHANNEL_ID de buraya eklendi
+} = require('../../config');
 const { Events } = require('discord.js');
 
 /**
@@ -12,20 +17,21 @@ module.exports = (client) => {
 
     // Tepkilerin önbelleğe alınması (Partial desteği için gereklidir)
     client.once(Events.ClientReady, async () => {
-        const { REACTION_CHANNEL_ID } = require('../config');
-        const channel = client.channels.cache.get(REACTION_CHANNEL_ID);
+        // Hata buradaydı: Tekrar require etmeye gerek yok, yukarıdaki değişkeni kullanıyoruz.
+        const channel = client.channels.cache.get(REACTION_CHANNEL_ID); 
+        
         if (channel) {
             try {
                 // Mesajı çekerek önbelleğe alıyoruz.
                 await channel.messages.fetch(REACTION_MESSAGE_ID);
-                console.log('Rol tepki mesajı önbelleğe alındı.');
+                console.log('✅ Rol tepki mesajı önbelleğe alındı.');
             } catch (error) {
-                console.error('Rol tepki mesajı önbelleğe alınamadı:', error);
+                console.error('❌ Rol tepki mesajı önbelleğe alınamadı. Mesaj ID\'sini kontrol edin:', error.message);
             }
         }
     });
 
-    // --- Tepki Eklendiğinde Rol Verme ---
+    // --- Tepki Eklendiğinde Rol Verme (Add) ---
     client.on(Events.MessageReactionAdd, async (reaction, user) => {
         if (user.bot || reaction.message.id !== REACTION_MESSAGE_ID) return;
 
@@ -43,15 +49,14 @@ module.exports = (client) => {
 
                 if (role && member) {
                     await member.roles.add(role);
-                    // console.log(`[ROL VERİLDİ] ${user.tag} -> ${role.name}`);
                 }
             } catch (error) {
-                console.error(`Rol verme hatası:`, error);
+                console.error(`❌ Rol verme hatası (${user.tag}):`, error);
             }
         }
     });
 
-    // --- Tepki Kaldırıldığında Rol Alma ---
+    // --- Tepki Kaldırıldığında Rol Alma (Remove) ---
     client.on(Events.MessageReactionRemove, async (reaction, user) => {
         if (user.bot || reaction.message.id !== REACTION_MESSAGE_ID) return;
         
@@ -70,10 +75,9 @@ module.exports = (client) => {
 
                 if (role && member) {
                     await member.roles.remove(role);
-                    // console.log(`[ROL ALINDI] ${user.tag} <- ${role.name}`);
                 }
             } catch (error) {
-                console.error(`Rol alma hatası:`, error);
+                console.error(`❌ Rol alma hatası (${user.tag}):`, error);
             }
         }
     });
