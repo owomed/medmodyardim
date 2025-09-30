@@ -1,6 +1,6 @@
 // utils/reactionRoles.js VEYA events/reactionRoles.js (Aşağıdaki Loader Güncellemesine göre yerini seçin)
 
-const { ROLE_EMOJI_MAP, REACTION_MESSAGE_ID } = require('../config');
+const { ROLE_EMOJI_MAP, REACTION_MESSAGE_ID } = require('../../config');
 const { Events } = require('discord.js');
 
 /**
